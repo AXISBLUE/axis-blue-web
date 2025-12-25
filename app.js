@@ -1,12 +1,15 @@
-/* AXIS BLUE — Multi-day local storage (Phase 1)
-   - Stores data by date ("day records") in localStorage
-   - Lets you load prior days
-   - Generates EVS/EOD TXT with legal + soft launch banner
-   - No backend yet (supabase sync later)
+/* AXIS BLUE — Supabase-wired v1
+   - Auth (email+password)
+   - Tables: axis_days, axis_visits, axis_intel
+   - UI: Run Day + Intelligence Lab
 */
 
-const AXIS_DB_KEY = "axisblue_db_v1";
+const SUPABASE_URL = "https://frhrutiqpshznnyurmlq.supabase.co"\;
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyaHJ1dGlxcHNoem5ueXVybWxxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2ODc0MjksImV4cCI6MjA4MjI2MzQyOX0.3Bhg7iw35aTsXnctpk2m2UDui6PaXUOJKVUmy4SxnNY";
 
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Stores list
 const STORES = [
   { id: "WM1492", name: "Walmart 1492", address: "14000 E Exposition Ave Aurora CO 80012", delivery: "usually yes" },
   { id: "KS00014", name: "King Soopers 00014", address: "655 Peoria St Aurora CO 80011", delivery: "usually no" },
@@ -15,115 +18,61 @@ const STORES = [
 ];
 
 function $(id){ return document.getElementById(id); }
-function nowISO(){ return new Date().toISOString(); }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 
-function download(name, data, mime="text/plain"){
-  const blob = new Blob([data], {type:mime});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-}
+let state = {
+  user: null,
+  day: null,        // axis_days row
+  activeVisit: null,
+  visits: [],
+  intel: []
+};
 
-function loadDB(){
-  try { return JSON.parse(localStorage.getItem(AXIS_DB_KEY) || "{}"); }
-  catch { return {}; }
+function setMode(mode){
+  $("modeRun").classList.toggle("hidden", mode !== "run");
+  $("modeIntel").classList.toggle("hidden", mode !== "intel");
+  $("tabRun").classList.toggle("active", mode === "run");
+  $("tabIntel").classList.toggle("active", mode === "intel");
 }
+window.showMode = (m)=> setMode(m);
 
-function saveDB(db){
-  localStorage.setItem(AXIS_DB_KEY, JSON.stringify(db));
+function setPills(){
+  $("host").textContent = window.location.host || "unknown";
+  $("userPill").textContent = state.user ? state.user.email : "signed out";
+  $("dbPill").textContent = state.user ? "connected" : "offline";
 }
-
-function ensureDB(){
-  const db = loadDB();
-  if (!db.meta) db.meta = { created: nowISO(), version:"v1" };
-  if (!db.days) db.days = {};           // key: YYYY-MM-DD -> dayRecord
-  if (!db.currentDay) db.currentDay = null;
-  saveDB(db);
-  return db;
-}
-
-function ensureDay(db, date){
-  if (!db.days[date]){
-    db.days[date] = {
-      date,
-      merchandiser: "",
-      created: nowISO(),
-      visits: [],
-      activeVisitId: null
-    };
-  }
-  return db.days[date];
-}
-
-function storeById(id){ return STORES.find(s => s.id === id); }
 
 function renderStores(){
-  const el = $("store");
-  el.innerHTML = "";
+  const storeSel = $("store");
+  const intelSel = $("intelStore");
+
+  storeSel.innerHTML = "";
+  intelSel.innerHTML = "";
+
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = "(none)";
+  intelSel.appendChild(opt0);
+
   STORES.forEach(s=>{
-    const o = document.createElement("option");
-    o.value = s.id;
-    o.textContent = s.name;
-    el.appendChild(o);
+    const o1 = document.createElement("option");
+    o1.value = s.id;
+    o1.textContent = s.name;
+    storeSel.appendChild(o1);
+
+    const o2 = document.createElement("option");
+    o2.value = s.id;
+    o2.textContent = s.name;
+    intelSel.appendChild(o2);
   });
 }
 
-function renderDayPicker(){
-  const db = ensureDB();
-  const el = $("dayPicker");
-  const dates = Object.keys(db.days).sort().reverse();
-
-  el.innerHTML = "";
-  if (!dates.length){
-    const o = document.createElement("option");
-    o.value = "";
-    o.textContent = "(no saved days yet)";
-    el.appendChild(o);
-    return;
-  }
-
-  dates.forEach(d=>{
-    const o = document.createElement("option");
-    o.value = d;
-    o.textContent = d;
-    el.appendChild(o);
-  });
-
-  // default picker selection
-  if (db.currentDay && dates.includes(db.currentDay)) el.value = db.currentDay;
+function requireAuth(){
+  if (!state.user) throw new Error("Not signed in.");
 }
 
-function getCurrent(){
-  const db = ensureDB();
-  const date = db.currentDay || $("date").value || todayISO();
-  const day = ensureDay(db, date);
-  return { db, date, day };
-}
-
-function setStatusUI(){
-  $("host").textContent = window.location.host || "unknown";
-  const { db, date, day } = getCurrent();
-  $("dayLoaded").textContent = db.currentDay || "(none)";
-  if (day.activeVisitId){
-    const v = day.visits.find(x => x.id === day.activeVisitId);
-    $("activeVisitState").textContent = v ? v.storeId : "unknown";
-  } else {
-    $("activeVisitState").textContent = "none";
-  }
-}
-
-function hydrateHeaderFromCurrent(){
-  const { db, day } = getCurrent();
-  $("date").value = db.currentDay || $("date").value || todayISO();
-  $("merchandiser").value = day.merchandiser || "";
-}
-
-function validateHeader(day){
-  if (!day.merchandiser?.trim()) return "Merchandiser is required.";
-  if (!day.date?.trim()) return "Date is required.";
-  return null;
+function requireDay(){
+  if (!state.day) throw new Error("Begin Day first.");
 }
 
 function escapeHTML(str){
@@ -132,296 +81,342 @@ function escapeHTML(str){
   }[m]));
 }
 
-function snippet(t){
-  if (!t) return "(none)";
-  const s = t.trim();
-  if (!s) return "(none)";
-  return s.length > 140 ? s.slice(0,140) + "…" : s;
-}
-
-function renderLog(){
-  const { day } = getCurrent();
-  const el = $("liveLog");
+function renderRunLog(){
+  const el = $("runLog");
   el.innerHTML = "";
 
-  if (!day.visits.length){
-    el.innerHTML = `<div class="pill">No visits yet. Start one above.</div>`;
+  if (!state.visits.length){
+    el.innerHTML = `<div style="color:#5b6477">No visits yet.</div>`;
     return;
   }
 
-  day.visits.slice().reverse().forEach(v=>{
-    const ended = v.ended ? `<span class="ok">ENDED</span>` : `<span class="warn">IN PROGRESS</span>`;
-    const urgent = v.urgent ? ` · <span class="warn">URGENT</span>` : "";
-    const html = `
-      <div class="visit">
-        <h3>${escapeHTML(v.storeName)}</h3>
-        <div class="meta mono">${ended}${urgent}</div>
-        <div class="kv">
-          <b>Start</b><div class="mono">${escapeHTML(v.started)}</div>
-          <b>End</b><div class="mono">${escapeHTML(v.ended || "(in progress)")}</div>
-          <b>Sales</b><div>${escapeHTML(snippet(v.salesOpp))}</div>
-          <b>Inventory</b><div>${escapeHTML(snippet(v.inventoryConcerns))}</div>
-          <b>PSR/MSR</b><div>${escapeHTML(snippet(v.repQuestions))}</div>
+  state.visits.slice().reverse().forEach(v=>{
+    const ended = v.ended_at ? `<span class="statusGood">ENDED</span>` : `<span class="statusWarn">IN PROGRESS</span>`;
+    const urgent = v.urgent ? ` · <span class="statusWarn">URGENT</span>` : "";
+    el.innerHTML += `
+      <div style="padding:12px;border:1px solid #d7e1ff;border-radius:14px;background:#fbfdff;margin-bottom:10px">
+        <div style="font-weight:900">${escapeHTML(v.store_name)} <span style="font-size:12px;color:#5b6477">(${escapeHTML(v.store_id)})</span></div>
+        <div style="font-size:12px;color:#5b6477">${ended}${urgent}</div>
+        <div style="margin-top:8px;font-size:13px">
+          <div><b>Sales:</b> ${escapeHTML((v.sales_opp||"").slice(0,140) || "(none)")}</div>
+          <div><b>Inventory:</b> ${escapeHTML((v.inventory_concerns||"").slice(0,140) || "(none)")}</div>
+          <div><b>PSR/MSR:</b> ${escapeHTML((v.rep_questions||"").slice(0,140) || "(none)")}</div>
         </div>
       </div>
     `;
-    const wrap = document.createElement("div");
-    wrap.innerHTML = html;
-    el.appendChild(wrap);
   });
 }
 
-function renderAll(){
-  renderDayPicker();
-  setStatusUI();
-  renderLog();
-}
+function renderIntelLog(){
+  const el = $("intelLog");
+  el.innerHTML = "";
 
-/* Actions */
-window.saveHeaderOnly = () => {
-  const { db, date, day } = getCurrent();
-  day.date = $("date").value || date;
-  day.merchandiser = $("merchandiser").value.trim();
-  saveDB(db);
-  renderAll();
-};
-
-window.beginDay = () => {
-  const db = ensureDB();
-  const date = $("date").value || todayISO();
-  const day = ensureDay(db, date);
-
-  day.date = date;
-  day.merchandiser = $("merchandiser").value.trim();
-
-  db.currentDay = date;
-  saveDB(db);
-  renderAll();
-
-  if (!day.merchandiser) return alert("Begin Day saved. Add merchandiser name when ready.");
-  alert(`Day loaded: ${date}`);
-};
-
-window.loadSelectedDay = () => {
-  const db = ensureDB();
-  const date = $("dayPicker").value;
-  if (!date) return alert("No saved day selected.");
-  ensureDay(db, date);
-  db.currentDay = date;
-  saveDB(db);
-
-  $("date").value = date;
-  hydrateHeaderFromCurrent();
-  renderAll();
-  alert(`Loaded day: ${date}`);
-};
-
-window.startVisit = () => {
-  const { db, date, day } = getCurrent();
-
-  // force day to be set
-  day.date = db.currentDay || $("date").value || date;
-  day.merchandiser = $("merchandiser").value.trim();
-
-  const err = validateHeader(day);
-  if (err) return alert(err);
-
-  const storeId = $("store").value;
-  const st = storeById(storeId);
-
-  const visit = {
-    id: "VISIT_" + Math.random().toString(16).slice(2) + "_" + Date.now(),
-    storeId,
-    storeName: st?.name || storeId,
-    address: st?.address || "",
-    delivery: st?.delivery || "",
-    started: nowISO(),
-    ended: null,
-    urgent: $("urgentFlag").value === "yes",
-    salesOpp: $("salesOpp").value.trim(),
-    inventoryConcerns: $("inventoryConcerns").value.trim(),
-    repQuestions: $("repQuestions").value.trim()
-  };
-
-  day.visits.push(visit);
-  day.activeVisitId = visit.id;
-
-  // lock current day
-  db.currentDay = day.date;
-
-  saveDB(db);
-  renderAll();
-  alert(`Visit started: ${visit.storeName}`);
-};
-
-window.endVisit = () => {
-  const { db, day } = getCurrent();
-  if (!day.activeVisitId) return alert("No active visit to end.");
-
-  const v = day.visits.find(x => x.id === day.activeVisitId);
-  if (!v){
-    day.activeVisitId = null;
-    saveDB(db);
-    renderAll();
-    return alert("Active visit missing. Session repaired.");
+  if (!state.intel.length){
+    el.innerHTML = `<div style="color:#5b6477">No intel records yet.</div>`;
+    return;
   }
 
-  v.urgent = $("urgentFlag").value === "yes";
-  v.salesOpp = $("salesOpp").value.trim();
-  v.inventoryConcerns = $("inventoryConcerns").value.trim();
-  v.repQuestions = $("repQuestions").value.trim();
-  v.ended = nowISO();
+  state.intel.slice().reverse().forEach(r=>{
+    el.innerHTML += `
+      <div style="padding:12px;border:1px solid #d7e1ff;border-radius:14px;background:#fbfdff;margin-bottom:10px">
+        <div style="font-weight:900">${escapeHTML(r.identifier_type)} · ${escapeHTML(r.identifier_value || "(no value)")}</div>
+        <div style="font-size:12px;color:#5b6477">${escapeHTML(r.store_name || "(no store)")} · ${escapeHTML(r.created_at)}</div>
+        <div style="margin-top:8px;font-size:13px">
+          <div><b>Payload:</b> ${escapeHTML((r.payload||"").slice(0,160) || "(none)")}</div>
+          <div><b>Notes:</b> ${escapeHTML((r.notes||"").slice(0,160) || "(none)")}</div>
+        </div>
+      </div>
+    `;
+  });
+}
 
-  day.activeVisitId = null;
+async function refreshFromDB(){
+  requireAuth();
 
-  saveDB(db);
-  renderAll();
-  alert(`Visit ended: ${v.storeName}`);
+  // Load day if exists for selected date
+  const dayDate = $("date").value || todayISO();
+  const { data: days, error: dayErr } = await supabase
+    .from("axis_days")
+    .select("*")
+    .eq("user_id", state.user.id)
+    .eq("day_date", dayDate)
+    .limit(1);
+
+  if (dayErr) throw dayErr;
+
+  state.day = days && days.length ? days[0] : null;
+
+  // Load visits + intel for day if day exists
+  if (state.day){
+    const { data: visits, error: vErr } = await supabase
+      .from("axis_visits")
+      .select("*")
+      .eq("day_id", state.day.id)
+      .order("created_at", { ascending: true });
+
+    if (vErr) throw vErr;
+    state.visits = visits || [];
+
+    const { data: intel, error: iErr } = await supabase
+      .from("axis_intel")
+      .select("*")
+      .eq("day_id", state.day.id)
+      .order("created_at", { ascending: true });
+
+    if (iErr) throw iErr;
+    state.intel = intel || [];
+  } else {
+    state.visits = [];
+    state.intel = [];
+  }
+
+  $("beginState").textContent = state.day ? "Day active ✅" : "Not started";
+  $("beginState").className = state.day ? "statusGood" : "statusBad";
+
+  renderRunLog();
+  renderIntelLog();
+  setPills();
+}
+
+window.refreshFromDB = async ()=>{
+  try { await refreshFromDB(); }
+  catch(e){ alert(e.message || String(e)); }
 };
 
-window.clearVisitForm = () => {
+window.loadToday = async ()=>{
+  $("date").value = todayISO();
+  await window.refreshFromDB();
+};
+
+window.saveHeaderOnly = async ()=>{
+  // just store locally in inputs; DB writes happen on Begin Day
+};
+
+window.beginDay = async ()=>{
+  try{
+    requireAuth();
+
+    const merch = ($("merchandiser").value || "").trim();
+    const dayDate = $("date").value || todayISO();
+    if (!merch) throw new Error("Merchandiser is required.");
+
+    // upsert day
+    const payload = {
+      user_id: state.user.id,
+      day_date: dayDate,
+      merchandiser: merch
+    };
+
+    const { data, error } = await supabase
+      .from("axis_days")
+      .upsert(payload, { onConflict: "user_id,day_date" })
+      .select("*")
+      .limit(1);
+
+    if (error) throw error;
+
+    state.day = data[0];
+    await refreshFromDB();
+  } catch(e){
+    alert(e.message || String(e));
+  }
+};
+
+window.startVisit = async ()=>{
+  try{
+    requireAuth();
+    requireDay();
+
+    const storeId = $("store").value;
+    if (!storeId) throw new Error("Select a store.");
+
+    const st = STORES.find(x => x.id === storeId);
+    const urgent = $("urgentFlag").value === "yes";
+
+    const row = {
+      user_id: state.user.id,
+      day_id: state.day.id,
+      store_id: storeId,
+      store_name: st?.name || storeId,
+      address: st?.address || null,
+      delivery: st?.delivery || null,
+      urgent,
+      sales_opp: ($("salesOpp").value || "").trim(),
+      inventory_concerns: ($("inventoryConcerns").value || "").trim(),
+      rep_questions: ($("repQuestions").value || "").trim(),
+      started_at: new Date().toISOString(),
+      ended_at: null
+    };
+
+    const { data, error } = await supabase
+      .from("axis_visits")
+      .insert(row)
+      .select("*")
+      .limit(1);
+
+    if (error) throw error;
+
+    state.activeVisit = data[0];
+    await refreshFromDB();
+  } catch(e){
+    alert(e.message || String(e));
+  }
+};
+
+window.endVisit = async ()=>{
+  try{
+    requireAuth();
+    requireDay();
+    if (!state.visits.length) throw new Error("No visits yet.");
+
+    // End the most recent in-progress visit
+    const last = [...state.visits].reverse().find(v => !v.ended_at);
+    if (!last) throw new Error("No in-progress visit to end.");
+
+    const patch = {
+      urgent: $("urgentFlag").value === "yes",
+      sales_opp: ($("salesOpp").value || "").trim(),
+      inventory_concerns: ($("inventoryConcerns").value || "").trim(),
+      rep_questions: ($("repQuestions").value || "").trim(),
+      ended_at: new Date().toISOString()
+    };
+
+    const { error } = await supabase
+      .from("axis_visits")
+      .update(patch)
+      .eq("id", last.id);
+
+    if (error) throw error;
+
+    state.activeVisit = null;
+    await refreshFromDB();
+  } catch(e){
+    alert(e.message || String(e));
+  }
+};
+
+window.clearVisitForm = ()=>{
   $("urgentFlag").value = "no";
   $("salesOpp").value = "";
   $("inventoryConcerns").value = "";
   $("repQuestions").value = "";
 };
 
-window.resetAll = () => {
-  if (!confirm("Reset local data? This clears all saved days on this device/browser.")) return;
-  localStorage.removeItem(AXIS_DB_KEY);
-  ensureDB();
-  $("date").value = todayISO();
-  $("merchandiser").value = "";
-  renderStores();
-  renderAll();
-};
+window.saveIntel = async ()=>{
+  try{
+    requireAuth();
+    requireDay();
 
-/* Exports with Soft Launch + Legal */
-function legalBlock(){
-  return [
-    "LEGAL: Internal operational tooling for field execution support. Do not upload confidential, regulated, or customer-proprietary data.",
-    "Logs are stored locally unless explicitly connected to approved storage services.",
-    "SOFT PRODUCT LAUNCH: Feature set is operational and evolving. Feedback drives iteration."
-  ].join("\n");
-}
+    const storeId = $("intelStore").value || null;
+    const st = storeId ? STORES.find(x => x.id === storeId) : null;
 
-function evsText(day, v){
-  const lines = [];
-  lines.push("AXIS FIELD EXECUTION REPORT");
-  lines.push("STORE VISIT SUMMARY");
-  lines.push("SOFT PRODUCT LAUNCH — OPERATIONAL WORKFLOW (EVOLVING)");
-  lines.push("");
-  lines.push(`Merchandiser: ${day.merchandiser}`);
-  lines.push(`Date: ${day.date}`);
-  lines.push(`Store: ${v.storeName} (${v.storeId})`);
-  if (v.address) lines.push(`Address: ${v.address}`);
-  if (v.delivery) lines.push(`Delivery pattern: ${v.delivery}`);
-  lines.push(`Start: ${v.started}`);
-  lines.push(`End: ${v.ended || "(in progress)"}`);
-  lines.push("");
+    const row = {
+      user_id: state.user.id,
+      day_id: state.day.id,
+      store_id: storeId,
+      store_name: st?.name || null,
+      identifier_type: $("intelType").value,
+      identifier_value: ($("intelValue").value || "").trim(),
+      payload: ($("intelPayload").value || "").trim(),
+      notes: ($("intelNotes").value || "").trim()
+    };
 
-  if (v.urgent){
-    lines.push("URGENT ISSUE FLAG: YES");
-    lines.push("");
+    const { error } = await supabase.from("axis_intel").insert(row);
+    if (error) throw error;
+
+    $("intelValue").value = "";
+    $("intelPayload").value = "";
+    $("intelNotes").value = "";
+    await refreshFromDB();
+  } catch(e){
+    alert(e.message || String(e));
   }
-
-  lines.push("SALES OPPORTUNITIES");
-  lines.push(v.salesOpp ? v.salesOpp : "(none)");
-  lines.push("");
-
-  lines.push("INVENTORY CONCERNS / SKUs");
-  lines.push(v.inventoryConcerns ? v.inventoryConcerns : "(none)");
-  lines.push("");
-
-  lines.push("QUESTIONS / COMMENTS FOR PSR/MSR");
-  lines.push(v.repQuestions ? v.repQuestions : "(none)");
-  lines.push("");
-
-  lines.push("PHOTOS");
-  lines.push("Attached in additional documents to conserve file size.");
-  lines.push("");
-  lines.push(legalBlock());
-  return lines.join("\n");
-}
-
-window.downloadEVSForLast = () => {
-  const { day } = getCurrent();
-  if (!day.visits.length) return alert("No visits yet.");
-  const v = day.visits[day.visits.length - 1];
-  const txt = evsText(day, v);
-  const safeStore = (v.storeName || "store").replace(/[^a-z0-9]+/gi, "_");
-  download(`EVS_${safeStore}_${day.date}.txt`, txt, "text/plain");
 };
 
-window.downloadEOD = () => {
-  const { day } = getCurrent();
-  if (!day.date) day.date = $("date").value || todayISO();
-  if (!day.merchandiser) day.merchandiser = $("merchandiser").value.trim();
-  const err = validateHeader(day);
-  if (err) return alert(err);
+window.clearIntel = ()=>{
+  $("intelStore").value = "";
+  $("intelType").value = "NFC";
+  $("intelValue").value = "";
+  $("intelPayload").value = "";
+  $("intelNotes").value = "";
+};
 
-  const lines = [];
-  lines.push("AXIS FIELD EXECUTION REPORT");
-  lines.push("END OF DAY SUMMARY");
-  lines.push("SOFT PRODUCT LAUNCH — OPERATIONAL WORKFLOW (EVOLVING)");
-  lines.push("");
-  lines.push(`Merchandiser: ${day.merchandiser}`);
-  lines.push(`Date: ${day.date}`);
-  lines.push("");
+window.downloadIntelExport = ()=>{
+  const blob = {
+    day: state.day,
+    intel: state.intel
+  };
+  const name = `AXIS_INTEL_${$("date").value || todayISO()}.json`;
+  const data = JSON.stringify(blob, null, 2);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+  a.download = name;
+  a.click();
+};
 
-  if (!day.visits.length){
-    lines.push("(No visits logged.)");
-    lines.push("");
-    lines.push(legalBlock());
-    return download(`EOD_${day.date}.txt`, lines.join("\n"), "text/plain");
+window.downloadDBBackup = window.downloadDB = async ()=>{
+  try{
+    requireAuth();
+    // This is just a “client snapshot” of what we currently have loaded.
+    const blob = { user: state.user, day: state.day, visits: state.visits, intel: state.intel };
+    const name = `AXIS_DB_SNAPSHOT_${$("date").value || todayISO()}.json`;
+    const data = JSON.stringify(blob, null, 2);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    a.download = name;
+    a.click();
+  } catch(e){
+    alert(e.message || String(e));
   }
-
-  // only concerns: sales opps, inventory, other comments + urgent
-  day.visits.forEach((v, idx)=>{
-    lines.push(`STOP ${idx + 1}: ${v.storeName} (${v.storeId})`);
-    if (v.urgent) lines.push("!! URGENT FLAGGED ISSUE !!");
-
-    if (v.salesOpp?.trim()){
-      lines.push("Sales opportunities:");
-      lines.push(v.salesOpp.trim());
-    }
-    if (v.inventoryConcerns?.trim()){
-      lines.push("Inventory concerns / SKUs:");
-      lines.push(v.inventoryConcerns.trim());
-    }
-    if (v.repQuestions?.trim()){
-      lines.push("Other comments / questions for PSR/MSR:");
-      lines.push(v.repQuestions.trim());
-    }
-
-    if (!v.salesOpp?.trim() && !v.inventoryConcerns?.trim() && !v.repQuestions?.trim() && !v.urgent){
-      lines.push("(No concerns noted.)");
-    }
-    lines.push("");
-  });
-
-  lines.push(legalBlock());
-  download(`EOD_${day.date}.txt`, lines.join("\n"), "text/plain");
 };
 
-window.downloadJSON = () => {
-  const db = ensureDB();
-  download(`AXISBLUE_LOCAL_DB_${todayISO()}.json`, JSON.stringify(db, null, 2), "application/json");
+window.signIn = async ()=>{
+  try{
+    const email = ($("authEmail").value || "").trim();
+    const password = ($("authPass").value || "").trim();
+    if (!email || !password) throw new Error("Email and password required.");
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+
+    state.user = data.user;
+    $("authCard").classList.add("hidden");
+    $("modeRun").classList.remove("hidden");
+    setMode("run");
+    setPills();
+    await refreshFromDB();
+  } catch(e){
+    alert(e.message || String(e));
+  }
 };
 
-/* Boot */
-document.addEventListener("DOMContentLoaded", ()=>{
-  ensureDB();
+window.signOut = async ()=>{
+  await supabase.auth.signOut();
+  state = { user:null, day:null, activeVisit:null, visits:[], intel:[] };
+  $("authCard").classList.remove("hidden");
+  $("modeRun").classList.add("hidden");
+  $("modeIntel").classList.add("hidden");
+  setPills();
+};
+
+async function init(){
   renderStores();
-
   $("date").value = todayISO();
   $("host").textContent = window.location.host || "unknown";
 
-  // load current day if exists
-  const db = ensureDB();
-  if (db.currentDay){
-    $("date").value = db.currentDay;
+  const { data } = await supabase.auth.getUser();
+  state.user = data.user || null;
+  setPills();
+
+  if (state.user){
+    $("authCard").classList.add("hidden");
+    $("modeRun").classList.remove("hidden");
+    setMode("run");
+    await refreshFromDB();
+  } else {
+    $("authCard").classList.remove("hidden");
+    setMode("run");
   }
-  hydrateHeaderFromCurrent();
-  renderAll();
-});
+}
+
+init();
