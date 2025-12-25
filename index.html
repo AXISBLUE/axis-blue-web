@@ -3,75 +3,111 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AXIS BLUE — Field Execution (Test)</title>
+  <title>AXIS BLUE — Field Execution</title>
   <style>
-    :root { --bg:#f6f6f6; --card:#ffffff; --ink:#111; --muted:#666; --line:#e6e6e6; --btn:#1f2937; --btn2:#374151; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: -apple-system, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink); }
-    .wrap { max-width: 980px; margin: 28px auto; padding: 0 16px 40px; }
-    h1 { margin: 0 0 6px; font-size: 34px; letter-spacing: -0.02em; }
-    .sub { color: var(--muted); margin: 0 0 18px; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-    .card h2 { margin: 0 0 10px; font-size: 18px; }
-    .row { display: grid; grid-template-columns: 1fr; gap: 10px; }
-    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    label { font-size: 12px; color: var(--muted); display:block; margin-bottom:6px; }
-    input, select, textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      font-size: 14px;
-      background: #fff;
+    :root{
+      --bg:#f4f7ff;
+      --card:#ffffff;
+      --ink:#0b1220;
+      --muted:#5b6477;
+      --line:#d7e1ff;
+      --blue:#1f4bd8;
+      --blue2:#1538a8;
+      --ghost:#eef3ff;
+      --warn:#b45309;
+      --ok:#047857;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     }
-    textarea { min-height: 90px; resize: vertical; }
-    .btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-    button {
-      border: 0;
-      background: var(--btn);
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1040px;margin:28px auto;padding:0 16px 84px}
+    .top{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
+      padding:16px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#ffffff, #f7faff);
     }
-    button.secondary { background: var(--btn2); }
-    button.ghost { background: transparent; color: var(--btn); border: 1px solid var(--line); }
-    .pill { display:inline-block; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; }
-    .status { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-    .log { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 12px; }
-    .visit { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; background:#fafafa; }
-    .visit h3 { margin: 0 0 6px; font-size: 14px; }
-    .visit .meta { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
-    .kv { display:grid; grid-template-columns: 160px 1fr; gap: 6px 10px; font-size: 13px; }
-    .kv b { color:#222; }
-    .warn { color:#b45309; font-weight:700; }
-    .ok { color:#047857; font-weight:700; }
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:48px;height:48px;border-radius:12px;background:var(--ghost);
+      display:grid;place-items:center;border:1px solid var(--line);color:var(--blue);font-weight:800;
+    }
+    h1{margin:0;font-size:28px;letter-spacing:-0.02em}
+    .sub{margin:4px 0 0;color:var(--muted)}
+    .badgeRow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{
+      display:inline-flex;gap:8px;align-items:center;
+      padding:6px 10px;border-radius:999px;border:1px solid var(--line);
+      background:#fff;color:var(--muted);font-size:12px
+    }
+    .mono{font-family:var(--mono)}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+    .card h2{margin:0 0 10px;font-size:16px}
+    .row{display:grid;grid-template-columns:1fr;gap:10px}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input,select,textarea{
+      width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;background:#fff;color:var(--ink)
+    }
+    textarea{min-height:92px;resize:vertical}
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    button{
+      border:0;background:var(--blue);color:#fff;padding:10px 14px;border-radius:12px;cursor:pointer;
+      font-weight:700;font-size:14px
+    }
+    button:hover{background:var(--blue2)}
+    button.secondary{background:#24324d}
+    button.ghost{background:var(--ghost);color:var(--blue);border:1px solid var(--line)}
+    .hint{color:var(--muted);font-size:13px;margin:10px 0 0}
+    .visit{padding:12px;border:1px solid var(--line);border-radius:14px;background:#fbfdff;margin-bottom:10px}
+    .visit h3{margin:0 0 6px;font-size:14px}
+    .meta{font-size:12px;color:var(--muted)}
+    .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 10px;font-size:13px;margin-top:8px}
+    .kv b{color:#223}
+    .ok{color:var(--ok);font-weight:800}
+    .warn{color:var(--warn);font-weight:800}
+    .banner{
+      margin-top:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);
+      background:linear-gradient(90deg,#eaf0ff,#ffffff);
+      color:#223; font-size:13px
+    }
+    .footerWrap{
+      position:fixed;left:0;right:0;bottom:0;
+      background:#fff;border-top:1px solid var(--line);
+      padding:10px 12px;
+    }
+    .footer{
+      max-width:1040px;margin:0 auto;padding:0 4px;
+      color:var(--muted);font-size:11px;line-height:1.25;text-align:center
+    }
+    .footer .legal{font-family:var(--mono);font-size:10px;color:#6a7388}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>AXIS BLUE — Web Online</h1>
-    <p class="sub">Private test environment (<span class="mono" id="host"></span>)</p>
+    <div class="top">
+      <div class="brand">
+        <div class="logo">AB</div>
+        <div>
+          <h1>AXIS BLUE — Field Execution</h1>
+          <div class="sub">Private test app (<span class="mono" id="host"></span>)</div>
+          <div class="banner"><b>Soft product launch:</b> this is the real working workflow environment. Expect improvements, not surprises.</div>
+        </div>
+      </div>
 
-    <div class="card">
-      <div class="status">
-        <span class="pill">Session: <span id="sessionState" class="mono">loading…</span></span>
-        <span class="pill">Active Visit: <span id="activeVisitState" class="mono">none</span></span>
-        <button class="ghost" onclick="resetAll()">Reset local session</button>
+      <div class="badgeRow">
+        <span class="pill">Day loaded: <span id="dayLoaded" class="mono">—</span></span>
+        <span class="pill">Active visit: <span id="activeVisitState" class="mono">none</span></span>
+        <button class="ghost" onclick="resetAll()">Reset local data</button>
       </div>
     </div>
 
     <div class="grid">
 
       <div class="card">
-        <h2>Start Day</h2>
+        <h2>Begin Day</h2>
         <div class="row2">
           <div>
-            <label>Merchandiser name</label>
+            <label>Merchandiser</label>
             <input id="merchandiser" placeholder="Merchandiser name" />
           </div>
           <div>
@@ -80,9 +116,28 @@
           </div>
         </div>
         <div class="btns">
-          <button onclick="beginRoute()">Begin Route</button>
-          <button class="secondary" onclick="saveHeaderOnly()">Save (no alerts)</button>
+          <button onclick="beginDay()">Begin Day</button>
+          <button class="ghost" onclick="saveHeaderOnly()">Save quietly</button>
         </div>
+        <p class="hint">This creates/loads the day record. Everything you log is saved under that date on this device.</p>
+      </div>
+
+      <div class="card">
+        <h2>Review Prior Days</h2>
+        <div class="row2">
+          <div>
+            <label>Select a saved day</label>
+            <select id="dayPicker"></select>
+          </div>
+          <div>
+            <label>Actions</label>
+            <div class="btns" style="margin-top:0">
+              <button class="secondary" onclick="loadSelectedDay()">Load Day</button>
+              <button class="ghost" onclick="downloadJSON()">Download JSON backup</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint">This is local history for now. When we wire Supabase, this becomes synced and searchable across devices.</p>
       </div>
 
       <div class="card">
@@ -112,7 +167,7 @@
             <textarea id="inventoryConcerns" placeholder="- OOS: Pepsi 12pk 12oz (SKU ####)&#10;- Low: MTN DEW 20oz (UPC ####)"></textarea>
           </div>
           <div>
-            <label>Questions / comments for PSR or MSR</label>
+            <label>Questions / comments for PSR/MSR</label>
             <textarea id="repQuestions" placeholder="- Need approval for display move&#10;- Credits clarification needed"></textarea>
           </div>
         </div>
@@ -123,11 +178,7 @@
           <button class="ghost" onclick="clearVisitForm()">Clear form</button>
         </div>
 
-        <div class="log">
-          <div class="status">
-            <span class="pill">Tip: hit <b>Start Visit</b> when you begin, fill notes during/after, then <b>End Visit</b>.</span>
-          </div>
-        </div>
+        <p class="hint">Tomorrow-ready: start visit, log the key bullets, end visit. Exports are clean and consistent.</p>
       </div>
 
       <div class="card">
@@ -135,11 +186,8 @@
         <div class="btns">
           <button onclick="downloadEVSForLast()">Download EVS TXT (last visit)</button>
           <button class="secondary" onclick="downloadEOD()">Download End-of-Day TXT</button>
-          <button class="ghost" onclick="downloadJSON()">Download JSON backup</button>
         </div>
-        <p class="sub" style="margin-top:10px;">
-          PDFs + photos/PDR come next. For tomorrow, this gives you clean logs + exportables with zero backend dependency.
-        </p>
+        <p class="hint">PDF generation is next. When PDFs are enabled, they will include the same footer legal blanket and the “Soft product launch” note.</p>
       </div>
 
       <div class="card">
@@ -147,6 +195,17 @@
         <div id="liveLog"></div>
       </div>
 
+    </div>
+  </div>
+
+  <div class="footerWrap">
+    <div class="footer">
+      <div><b>AXIS BLUE</b> — Field Execution Tools</div>
+      <div class="legal">
+        LEGAL: Internal operational tooling for field execution support. Do not upload confidential, regulated, or customer-proprietary data.
+        Use at your own discretion. Logs stored locally unless explicitly connected to approved storage services.
+      </div>
+      <div class="legal">SOFT PRODUCT LAUNCH: Feature set is operational and evolving. Feedback drives iteration.</div>
     </div>
   </div>
 
