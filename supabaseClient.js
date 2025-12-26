@@ -1,33 +1,26 @@
-/* global SUPABASE_URL, SUPABASE_ANON_KEY */
-let supabase = null;
+/*
+  AXIS BLUE Supabase client loader
+  - Uses window.AXIS_SUPABASE_URL and window.AXIS_SUPABASE_ANON_KEY if present.
+  - Falls back to placeholders so UI still loads even if config is missing.
+*/
+(function(){
+  const u = window.AXIS_SUPABASE_URL || localStorage.getItem("AXIS_SUPABASE_URL") || "";
+  const k = window.AXIS_SUPABASE_ANON_KEY || localStorage.getItem("AXIS_SUPABASE_ANON_KEY") || "";
 
-async function loadEnv() {
-  const r = await fetch("/api/env", { cache: "no-store" });
-  if (!r.ok) throw new Error("env endpoint failed");
-  return r.json();
-}
+  window.__SUPA_CFG__ = { url:u, key:k };
 
-async function initSupabase() {
-  const env = await loadEnv();
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-    throw new Error("Missing SUPABASE_URL or SUPABASE_ANON_KEY in Cloudflare env.");
-  }
-
-  // Load supabase-js from CDN at runtime (simple for Pages).
-  // Note: This is fine for a private test environment.
+  // Load supabase-js from CDN (keeps repo simple for Pages)
   const s = document.createElement("script");
-  s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+  s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"\;
   s.onload = () => {
-    supabase = window.supabase.createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+    if (!u || !k){
+      window.supabase = null;
+      window.__SUPA_ERR__ = "Supabase URL / anon key not set";
+      return;
+    }
+    window.supabase = window.supabasejs.createClient(u, k, {
+      auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+    });
   };
   document.head.appendChild(s);
-
-  // wait until created
-  await new Promise((resolve) => {
-    const t = setInterval(() => {
-      if (supabase) { clearInterval(t); resolve(); }
-    }, 30);
-  });
-
-  return env;
-}
+})();
