@@ -1,305 +1,187 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>AXIS BLUE | Field Console</title>
-  <link rel="icon" href="assets/axis_logo.png"/>
-  <link rel="stylesheet" href="styles.css"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AXIS BLUE • Field Console</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="assets/axis_logo.png" class="logo" alt="AXIS BLUE"/>
-      <div class="brandtext">
-        <div class="brandname">AXIS BLUE</div>
-        <div class="brandsub">Field Console</div>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logoBox">
+          <img src="assets/axis_logo.png" alt="AXIS BLUE" onerror="this.style.display='none'"/>
+        </div>
+        <div class="hgroup">
+          <h1>AXIS BLUE</h1>
+          <div class="sub">Field Console • aptest.axisblue.io</div>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip">ENV: <span id="envBadge" class="badge warn">…</span></span>
+        <span class="chip">HEALTH: <span id="healthBadge" class="badge warn">…</span></span>
+        <span class="chip">AUTH: <span id="authBadge" class="badge warn">CFG</span></span>
+        <span class="chip">SYNC: <span id="syncBadge" class="badge good">OK</span></span>
+        <span class="chip">BUILD: <span class="badge">`8f5d8a8-20251226-0802`</span></span>
       </div>
     </div>
-    <div class="statusline">
-      <span class="pill" id="pillEnv">ENV</span>
-      <span class="pill" id="pillHealth">HEALTH</span>
-      <span class="pill" id="pillAuth">AUTH</span>
-      <span class="pill" id="pillSync">SYNC</span>
-      <span class="build" id="buildStamp">BUILD: 70a4335-20251226-0024</span>
-    </div>
-  </header>
 
-  <main class="wrap">
-    <!-- LOGIN -->
-    <section class="card" id="screenLogin">
-      <h1>Secure Access</h1>
-      <p class="muted">Sign in to access your Day plan, Visit workflow, Capture/Scan tools, and reports.</p>
+    <div class="card">
+      <h2>Secure Access</h2>
+      <div class="small">Sign in to access your Day plan, Visit workflow, Capture/Scan tools, and reports.</div>
+
+      <div class="hr"></div>
+
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <button class="btn" id="btnConfig">Config</button>
+          <button class="btn ghost" id="btnDiagnostics">Diagnostics</button>
+        </div>
+        <div class="row">
+          <button class="btn ghost" id="btnSignOutTop" disabled>Sign out</button>
+        </div>
+      </div>
 
       <div class="grid2">
         <div>
           <label>Email</label>
-          <input id="email" type="email" autocomplete="username" placeholder="you@axisblue.io"/>
+          <input id="email" placeholder="you@axisblue.io" autocomplete="username" />
         </div>
         <div>
           <label>Password</label>
-          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••"/>
+          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
         </div>
       </div>
 
-      <div class="row">
+      <div class="row" style="margin-top:10px">
         <button class="btn primary" id="btnSignIn">Sign In</button>
-        <button class="btn" id="btnSignOut" disabled>Sign Out</button>
-        <span class="small muted" id="loginMsg"></span>
+        <button class="btn" id="btnTestConfig">Test Config</button>
+        <span class="badge warn" id="statusText">Waiting…</span>
       </div>
 
-      <hr/>
+      <div class="hr"></div>
+
       <div class="row">
         <button class="btn" id="btnEnv">/env</button>
         <button class="btn" id="btnHealth">/health</button>
-        <button class="btn" id="btnDiag">Diagnostics</button>
-        <span class="small muted" id="diagMsg"></span>
+        <button class="btn" id="btnDiag2">Diagnostics</button>
       </div>
 
-      <p class="legal">
+      <div class="small" style="margin-top:10px">
         Internal field tooling. Not an official product of any corporation. Use in accordance with applicable policies and local laws.
-      </p>
-    </section>
+      </div>
+    </div>
 
-    <!-- APP -->
-    <section class="card hidden" id="screenApp">
-      <div class="apphead">
-        <h1>Field Console</h1>
+    <div class="card" id="appCard" style="opacity:.55;pointer-events:none">
+      <h2>Dashboard</h2>
+      <div class="tabs">
+        <div class="tab active" data-tab="day">Run Day</div>
+        <div class="tab" data-tab="visit">Visit</div>
+        <div class="tab" data-tab="capture">Capture</div>
+        <div class="tab" data-tab="intel">Intelligence</div>
+        <div class="tab" data-tab="mgmt">Management</div>
+        <div class="tab" data-tab="history">History</div>
+      </div>
+
+      <div id="tab_day" style="margin-top:12px">
         <div class="row">
-          <button class="btn ghost" data-tab="tabDay">Day</button>
-          <button class="btn ghost" data-tab="tabVisit">Visit</button>
-          <button class="btn ghost" data-tab="tabCapture">Capture</button>
-          <button class="btn ghost" data-tab="tabScan">Scan</button>
-          <button class="btn ghost" data-tab="tabMgmt">Management</button>
-          <button class="btn ghost" data-tab="tabHistory">History</button>
+          <button class="btn primary" id="btnStartDay">Start Day</button>
+          <button class="btn" id="btnEndDay">End Day</button>
+          <span class="badge" id="dayState">day: none</span>
+        </div>
+
+        <label>Today's stores (select or add)</label>
+        <div class="row">
+          <input id="storeInput" placeholder="Add store name…" />
+          <button class="btn" id="btnAddStore">Add</button>
+        </div>
+        <div class="log" id="storeList" style="margin-top:10px">0 items</div>
+
+        <label>Morning Rundown builder (per selected store)</label>
+        <textarea id="morningNotes" placeholder="Template notes / priorities for the day..."></textarea>
+
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="btnMorning">Generate Morning Rundown</button>
+          <button class="btn" id="btnCopyMorning">Copy</button>
+        </div>
+        <div class="log" id="morningOut" style="margin-top:10px">—</div>
+      </div>
+
+      <div id="tab_visit" style="display:none;margin-top:12px">
+        <div class="small">Visit workflow UI lives here (start visit → photos by category → OOS/Credits → end visit report).</div>
+        <div class="log" style="margin-top:10px">Baseline placeholder: visit UI stays locked until auth is working.</div>
+      </div>
+
+      <div id="tab_capture" style="display:none;margin-top:12px">
+        <div class="small">Capture/Scan tools (barcode/QR, tag photo required, NFC iOS fallback) live here.</div>
+        <div class="log" style="margin-top:10px">Baseline placeholder: capture UI stays locked until auth is working.</div>
+      </div>
+
+      <div id="tab_intel" style="display:none;margin-top:12px">
+        <div class="small">Intelligence capture and notes.</div>
+        <div class="log" style="margin-top:10px">Baseline placeholder.</div>
+      </div>
+
+      <div id="tab_mgmt" style="display:none;margin-top:12px">
+        <div class="small">Management output, copy/email draft hooks.</div>
+        <div class="log" style="margin-top:10px">Baseline placeholder.</div>
+      </div>
+
+      <div id="tab_history" style="display:none;margin-top:12px">
+        <div class="small">History of days/visits stored in Supabase once auth works.</div>
+        <div class="log" style="margin-top:10px">Baseline placeholder.</div>
+      </div>
+
+      <div class="footer">
+        <div>AXIS BLUE • Private test</div>
+        <div id="footStatus">supabase: pending</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config modal -->
+  <div class="modalBack" id="modalBack">
+    <div class="modal">
+      <h3>CONFIG (STORED LOCALLY)</h3>
+      <div class="small">
+        Paste your Supabase Project URL + Anon Key. Stored only in your browser (localStorage).
+        If you accidentally pasted a key somewhere public, rotate it in Supabase.
+      </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <div>
+          <label>Supabase URL</label>
+          <input id="cfgUrl" placeholder="https://xxxx.supabase.co" />
+        </div>
+        <div>
+          <label>Supabase Anon Key</label>
+          <input id="cfgKey" placeholder="eyJhbGciOi..." />
         </div>
       </div>
 
-      <div class="tabs">
-
-        <!-- DAY -->
-        <section class="tab" id="tabDay">
-          <h2>Start Day</h2>
-          <div class="grid3">
-            <div>
-              <label>Route / Cluster</label>
-              <input id="dayRoute" placeholder="e.g., Aurora LF / Cluster A"/>
-            </div>
-            <div>
-              <label>Date</label>
-              <input id="dayDate" type="date"/>
-            </div>
-            <div>
-              <label>Travel Buffer (mins)</label>
-              <input id="dayTravel" type="number" min="0" value="15"/>
-            </div>
-          </div>
-
-          <div class="grid2">
-            <div class="cardlite">
-              <h3>Morning Attestations</h3>
-              <label class="chk"><input id="attShoes" type="checkbox"/> Safety footwear confirmed</label>
-              <label class="chk"><input id="attPremier" type="checkbox"/> PREMIER process will be followed</label>
-              <label class="chk"><input id="attSafety" type="checkbox"/> Ready to work safely (hydration, rest, awareness)</label>
-            </div>
-            <div class="cardlite">
-              <h3>Day Controls</h3>
-              <div class="row">
-                <button class="btn primary" id="btnStartDay">Start Day</button>
-                <button class="btn" id="btnEndDay">End Day</button>
-                <button class="btn" id="btnTemplateDay">Template Mode</button>
-              </div>
-              <div class="small muted" id="dayMsg"></div>
-            </div>
-          </div>
-
-          <h3>Stores for Today</h3>
-          <p class="muted">Add stores, set estimated minutes per stop, then generate a Morning Rundown.</p>
-
-          <div class="grid3">
-            <div>
-              <label>Store Name</label>
-              <input id="storeName" placeholder="e.g., Walmart 1492"/>
-            </div>
-            <div>
-              <label>Address</label>
-              <input id="storeAddr" placeholder="Street, City, ST ZIP"/>
-            </div>
-            <div>
-              <label>Est. Minutes On-Site</label>
-              <input id="storeMins" type="number" min="5" value="30"/>
-            </div>
-          </div>
-          <div class="row">
-            <button class="btn" id="btnAddStore">Add Store</button>
-            <button class="btn" id="btnMorningReport">Generate Morning Rundown</button>
-            <span class="small muted" id="morningMsg"></span>
-          </div>
-
-          <div class="list" id="storeList"></div>
-        </section>
-
-        <!-- VISIT -->
-        <section class="tab hidden" id="tabVisit">
-          <h2>Visit Workflow</h2>
-          <p class="muted">Select a store from today’s list, then Start Visit. All Capture/Scan items will bind to the active visit.</p>
-
-          <div class="grid2">
-            <div>
-              <label>Store</label>
-              <select id="visitStore"></select>
-            </div>
-            <div>
-              <label>Active Visit</label>
-              <input id="activeVisit" readonly placeholder="None"/>
-            </div>
-          </div>
-
-          <div class="row">
-            <button class="btn primary" id="btnStartVisit">Start Visit</button>
-            <button class="btn" id="btnEndVisit">End Visit</button>
-            <button class="btn" id="btnUrgentFlag">Flag Urgent Issue</button>
-            <span class="small muted" id="visitMsg"></span>
-          </div>
-
-          <div class="grid2">
-            <div class="cardlite">
-              <h3>Visit Notes</h3>
-              <label>Sales Opportunities / Inventory Concerns</label>
-              <textarea id="visitNotes" rows="5" placeholder="Short, actionable notes..."></textarea>
-              <label>Questions / Concerns for PSR/MSR</label>
-              <textarea id="visitConcerns" rows="3" placeholder="Anything to pass along..."></textarea>
-            </div>
-
-            <div class="cardlite">
-              <h3>Equipment</h3>
-              <p class="muted">Track what impacted execution today.</p>
-              <div class="grid2">
-                <label class="chk"><input type="checkbox" id="eqCoolers"/> Coolers</label>
-                <label class="chk"><input type="checkbox" id="eqUboats"/> U-boats</label>
-                <label class="chk"><input type="checkbox" id="eqPallets"/> Pallets</label>
-                <label class="chk"><input type="checkbox" id="eqRacks"/> Racks</label>
-                <label class="chk"><input type="checkbox" id="eqPOS"/> POS/Signage</label>
-                <label class="chk"><input type="checkbox" id="eqOther"/> Other</label>
-              </div>
-              <label>If “Other”, specify</label>
-              <input id="eqOtherText" placeholder="e.g., broken cart, missing key, etc."/>
-              <div class="row">
-                <button class="btn" id="btnSaveVisit">Save Visit</button>
-                <button class="btn" id="btnEVS">Generate EOV Report</button>
-              </div>
-              <div class="small muted" id="saveVisitMsg"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- CAPTURE -->
-        <section class="tab hidden" id="tabCapture">
-          <h2>Photo Capture</h2>
-          <p class="muted">Photos bind to the active visit + category. Optional 2-line comment per photo.</p>
-
-          <div class="grid3">
-            <div>
-              <label>Category</label>
-              <select id="photoCategory">
-                <option>Sales Floor</option>
-                <option>Backroom</option>
-                <option>Credits</option>
-                <option>Coolers</option>
-              </select>
-            </div>
-            <div>
-              <label>Comment (optional, max 2 lines)</label>
-              <input id="photoComment" placeholder="Short note (2 lines max)"/>
-            </div>
-            <div class="row end">
-              <input id="photoFile" type="file" accept="image/*" capture="environment"/>
-            </div>
-          </div>
-
-          <div class="row">
-            <button class="btn primary" id="btnUploadPhoto">Upload Photo</button>
-            <button class="btn" id="btnViewQueue">View Sync Queue</button>
-            <span class="small muted" id="photoMsg"></span>
-          </div>
-
-          <div class="list" id="photoList"></div>
-        </section>
-
-        <!-- SCAN -->
-        <section class="tab hidden" id="tabScan">
-          <h2>Scan</h2>
-          <p class="muted">QR + barcode. Saves to active visit under OOS / Credits / Breakage / General.</p>
-
-          <div class="grid3">
-            <div>
-              <label>Scan Type</label>
-              <select id="scanType">
-                <option>OOS</option>
-                <option>Credits</option>
-                <option>Breakage</option>
-                <option>General</option>
-              </select>
-            </div>
-            <div>
-              <label>Manual Value (fallback)</label>
-              <input id="scanManual" placeholder="UPC/QR value if scan not supported"/>
-            </div>
-            <div class="row end">
-              <button class="btn primary" id="btnStartScan">Start Scan</button>
-              <button class="btn" id="btnSaveManual">Save Manual</button>
-            </div>
-          </div>
-
-          <div class="cardlite">
-            <h3>Scan Output</h3>
-            <div class="small" id="scanOut">No scans yet.</div>
-            <div class="row">
-              <button class="btn" id="btnNFC">NFC (iOS note)</button>
-              <span class="small muted" id="nfcMsg"></span>
-            </div>
-          </div>
-
-          <div class="list" id="scanList"></div>
-        </section>
-
-        <!-- MANAGEMENT -->
-        <section class="tab hidden" id="tabMgmt">
-          <h2>Management Output</h2>
-          <p class="muted">Copy/paste ready blocks now. Email draft generator included. Teams send can be wired next.</p>
-
-          <div class="row">
-            <button class="btn" id="btnCopyMorning">Copy Morning Rundown</button>
-            <button class="btn" id="btnCopyEOD">Copy End-of-Day Summary</button>
-            <button class="btn" id="btnCopyHandoff">Copy Relief Handoff</button>
-            <button class="btn primary" id="btnEmailDraft">Create Email Draft</button>
-          </div>
-          <div class="small muted" id="mgmtMsg"></div>
-
-          <label>Output</label>
-          <textarea id="mgmtOut" rows="14" placeholder="Generated output appears here..."></textarea>
-        </section>
-
-        <!-- HISTORY -->
-        <section class="tab hidden" id="tabHistory">
-          <h2>History</h2>
-          <p class="muted">Review prior days and visits (local + synced).</p>
-          <div class="row">
-            <button class="btn" id="btnRefreshHistory">Refresh</button>
-            <button class="btn" id="btnExportJSON">Export JSON</button>
-          </div>
-          <div class="list" id="historyList"></div>
-        </section>
+      <div class="grid2" style="margin-top:10px">
+        <div>
+          <label>Storage bucket for photos</label>
+          <input id="cfgPhotos" placeholder="work-photos" />
+        </div>
+        <div>
+          <label>Storage bucket for event logs</label>
+          <input id="cfgEvents" placeholder="events" />
+        </div>
       </div>
 
-      <hr/>
-      <p class="legal">
-        Internal field tooling. Not an official product of any corporation. Data may be sensitive. Handle appropriately.
-      </p>
-    </section>
-  </main>
+      <div class="row" style="margin-top:10px">
+        <button class="btn primary" id="cfgSave">Save</button>
+        <button class="btn" id="cfgClose">Close</button>
+        <button class="btn ghost" id="cfgClear">Clear</button>
+      </div>
+
+      <div class="log" id="cfgLog" style="margin-top:10px">—</div>
+    </div>
+  </div>
 
   <script src="supabaseClient.js"></script>
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

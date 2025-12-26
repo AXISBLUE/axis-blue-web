@@ -1,26 +1,81 @@
-/*
-  AXIS BLUE Supabase client loader
-  - Uses window.AXIS_SUPABASE_URL and window.AXIS_SUPABASE_ANON_KEY if present.
-  - Falls back to placeholders so UI still loads even if config is missing.
-*/
-(function(){
-  const u = window.AXIS_SUPABASE_URL || localStorage.getItem("AXIS_SUPABASE_URL") || "";
-  const k = window.AXIS_SUPABASE_ANON_KEY || localStorage.getItem("AXIS_SUPABASE_ANON_KEY") || "";
+(function () {
+  const KEY = "AXIS_SUPABASE_CONFIG";
 
-  window.__SUPA_CFG__ = { url:u, key:k };
-
-  // Load supabase-js from CDN (keeps repo simple for Pages)
-  const s = document.createElement("script");
-  s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"\;
-  s.onload = () => {
-    if (!u || !k){
-      window.supabase = null;
-      window.__SUPA_ERR__ = "Supabase URL / anon key not set";
-      return;
-    }
-    window.supabase = window.supabasejs.createClient(u, k, {
-      auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.async = true;
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
     });
+  }
+
+  function getLocalConfig() {
+    try {
+      return JSON.parse(localStorage.getItem(KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  function setLocalConfig(cfg) {
+    localStorage.setItem(KEY, JSON.stringify(cfg));
+  }
+
+  async function fetchEnvConfig() {
+    try {
+      const r = await fetch("/api/env", { cache: "no-store" });
+      const j = await r.json();
+      if (j && j.ok && j.SUPABASE_URL && j.SUPABASE_ANON_KEY === "SET") {
+        // We can't see the raw anon key from /api/env (by design),
+        // so env config isn't enough alone. Local config is primary.
+        return { ok: true, envOnly: true, url: j.SUPABASE_URL };
+      }
+      return { ok: false };
+    } catch {
+      return { ok: false };
+    }
+  }
+
+  async function initSupabase() {
+    window.supabase = null;
+    window.__axisSupabase = {
+      status: "INIT",
+      local: getLocalConfig(),
+      env: null
+    };
+
+    // Load Supabase JS CDN
+    await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
+    window.supabasejs = window.supabasejs || window.supabase; // some builds expose differently
+
+    const local = getLocalConfig();
+    if (local && local.url && local.anonKey) {
+      try {
+        window.supabase = window.supabasejs.createClient(local.url, local.anonKey, {
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+        });
+        window.__axisSupabase.status = "READY_LOCAL";
+        return { ok: true, mode: "local" };
+      } catch (e) {
+        window.__axisSupabase.status = "ERR_LOCAL";
+        window.__axisSupabase.error = String(e);
+        return { ok: false, error: String(e) };
+      }
+    }
+
+    const env = await fetchEnvConfig();
+    window.__axisSupabase.env = env;
+    window.__axisSupabase.status = "NEEDS_CONFIG";
+    return { ok: false, needsConfig: true };
+  }
+
+  window.AxisConfig = {
+    KEY,
+    get: getLocalConfig,
+    set: setLocalConfig,
+    initSupabase
   };
-  document.head.appendChild(s);
 })();
