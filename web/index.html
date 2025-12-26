@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>AXIS BLUE — Web Online (Test)</title>
+
+  <style>
+    :root{
+      --bg0:#061525;
+      --bg1:#0b2a4a;
+      --card:rgba(255,255,255,.06);
+      --card2:rgba(0,0,0,.12);
+      --stroke:rgba(255,255,255,.10);
+      --text:#eaf2ff;
+      --muted:rgba(234,242,255,.72);
+      --accent:#3aa2ff;
+      --danger:#ff4d4d;
+      --ok:#4dff9a;
+      --warn:#ffd24d;
+      --shadow:0 18px 50px rgba(0,0,0,.35);
+      --r:18px;
+      --pad:18px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    body{
+      margin:0;
+      color:var(--text);
+      background: radial-gradient(1200px 600px at 18% 10%, rgba(58,162,255,.24), transparent 60%),
+                  radial-gradient(900px 500px at 80% 0%, rgba(77,255,154,.10), transparent 55%),
+                  linear-gradient(160deg, var(--bg0), var(--bg1));
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      padding:22px 14px 90px;
+    }
+
+    .wrap{ width:min(720px, 100%); }
+    .top{
+      display:flex; gap:14px; align-items:flex-start; justify-content:space-between;
+      margin-bottom:14px;
+    }
+    .title h1{
+      margin:0;
+      font-size:40px;
+      letter-spacing:.3px;
+      line-height:1.05;
+    }
+    .title p{ margin:10px 0 0; color:var(--muted); }
+    .chips{
+      display:flex; flex-direction:column; gap:10px; align-items:flex-end;
+      margin-top:6px;
+    }
+    .chip{
+      padding:10px 12px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.04);
+      border-radius:999px;
+      color:var(--muted);
+      font-size:13px;
+      white-space:nowrap;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--stroke);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      padding:var(--pad);
+      margin:14px 0;
+      backdrop-filter: blur(10px);
+    }
+
+    label{ display:block; font-size:13px; color:var(--muted); margin:12px 0 6px; }
+    input, select, textarea{
+      width:100%;
+      box-sizing:border-box;
+      padding:14px 14px;
+      border-radius:14px;
+      border:1px solid var(--stroke);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+      font-size:16px;
+    }
+    input:disabled, select:disabled, textarea:disabled{ opacity:.55; }
+
+    .row{ display:flex; gap:12px; }
+    .row > *{ flex:1; }
+
+    .btnrow{ display:flex; gap:12px; margin-top:14px; }
+    button{
+      border:1px solid var(--stroke);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
+      border-radius:14px;
+      padding:14px 16px;
+      font-size:16px;
+      cursor:pointer;
+      transition: transform .05s ease, background .15s ease;
+      min-width:140px;
+    }
+    button.primary{
+      background: linear-gradient(180deg, rgba(58,162,255,.95), rgba(58,162,255,.62));
+      border-color: rgba(58,162,255,.55);
+      color:#03101e;
+      font-weight:700;
+    }
+    button:disabled{ opacity:.45; cursor:not-allowed; }
+    button:active{ transform: translateY(1px); }
+
+    .meta{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-top:6px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .divider{
+      height:1px; background:rgba(255,255,255,.10);
+      margin:16px 0;
+    }
+
+    .footer{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      padding:12px 14px;
+      background:rgba(0,0,0,.45);
+      border-top:1px solid rgba(255,255,255,.10);
+      text-align:center;
+      color:rgba(255,255,255,.72);
+      font-size:12px;
+      backdrop-filter: blur(10px);
+    }
+
+    .pill{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      margin-left:8px;
+      font-size:12px;
+      color:rgba(255,255,255,.70);
+    }
+
+    #toast{
+      position:fixed;
+      left:50%;
+      bottom:78px;
+      transform: translateX(-50%);
+      background:rgba(0,0,0,.72);
+      border:1px solid rgba(255,255,255,.14);
+      padding:10px 12px;
+      border-radius:999px;
+      color:rgba(255,255,255,.92);
+      font-size:13px;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      max-width:92vw;
+      text-align:center;
+      backdrop-filter: blur(10px);
+    }
+    #toast.show{ opacity:1; transform: translateX(-50%) translateY(-4px); }
+    #toast[data-kind="ok"]{ border-color: rgba(77,255,154,.35); }
+    #toast[data-kind="err"]{ border-color: rgba(255,77,77,.45); color:#ffd6d6; }
+    #toast[data-kind="warn"]{ border-color: rgba(255,210,77,.45); color:#fff1c7; }
+  </style>
+
+  <!-- Supabase JS (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title">
+        <h1>AXIS BLUE — Web Online</h1>
+        <p>Private test environment <b>aptest.axisblue.io</b></p>
+        <div class="meta">
+          <span>Status: <span id="status">Loading…</span></span>
+          <span>Signed in as: <span id="who">Loading…</span></span>
+        </div>
+      </div>
+      <div class="chips">
+        <div class="chip">Environment: Test</div>
+        <div class="chip">Data: Supabase</div>
+        <div class="chip">Build: Static + Functions</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 6px;">Authentication</h2>
+      <div style="color:var(--muted); font-size:13px; line-height:1.35;">
+        Sign in to unlock day + visit workflow. If auth fails, you’ll see a toast and a real error message.
+      </div>
+
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" value="gabriel.kearns@axisblue.io"/>
+
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password"/>
+
+      <div class="btnrow">
+        <button id="btnSignIn" class="primary">Sign In</button>
+        <button id="btnSignOut">Sign Out</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2 style="margin:0 0 6px;">Start Day</h2>
+      <div style="color:var(--muted); font-size:13px; line-height:1.35;">
+        Creates a Day record in Supabase. This becomes the parent container for visits and your “history”.
+      </div>
+
+      <label for="merchName">Merchandiser name</label>
+      <input id="merchName" type="text" value="Gabriel Kearns" disabled/>
+
+      <label for="dayDate">Date</label>
+      <input id="dayDate" type="date" disabled/>
+
+      <div class="btnrow">
+        <button id="btnBeginDay" class="primary" disabled>Begin Day</button>
+      </div>
+
+      <div class="meta" style="margin-top:12px;">
+        <span class="pill">Active Day</span>
+        <span id="activeDay">No day active</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2 style="margin:0 0 6px;">Store Visit</h2>
+      <div style="color:var(--muted); font-size:13px; line-height:1.35;">
+        Next: visits, photo intake, NFC/QR/UPC capture, and PDF generation hooks.
+      </div>
+
+      <label>Store</label>
+      <select disabled>
+        <option>Walmart 1492</option>
+        <option>King Soopers 00014</option>
+        <option>Family Dollar 3477</option>
+        <option>Target SC 1471</option>
+      </select>
+
+      <div class="btnrow">
+        <button disabled>Start Visit</button>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+  </div>
+
+  <div class="footer">
+    AXIS BLUE is a private operational system. Unauthorized access, sharing, or distribution is prohibited.
+    <span class="pill">Test environment: aptest.axisblue.io</span>
+    <span class="pill">Soft launch phase</span>
+    <span class="pill">Internal use only</span>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
