@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AXIS BLUE | Field Console</title>
+  <style>
+    :root{
+      --bg:#07101f; --p:#0b1a33; --p2:#081429; --ink:#e9f0ff; --mut:#9fb2d6;
+      --ln:#193159; --ac:#63a8ff; --ok:#2dd4bf; --bad:#fb7185; --wrn:#fbbf24;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --ui: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0;color:var(--ink);font-family:var(--ui);background:
+      radial-gradient(1100px 650px at 18% -10%, rgba(46,93,188,.55) 0%, rgba(46,93,188,0) 55%),
+      radial-gradient(900px 500px at 90% 0%, rgba(0,205,255,.18) 0%, rgba(0,205,255,0) 55%),
+      var(--bg);
+    }
+    .wrap{max-width:1120px;margin:0 auto;padding:18px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:1px solid var(--ln);
+      border-radius:14px;background:linear-gradient(180deg, rgba(11,26,51,.92), rgba(8,20,41,.82));
+      box-shadow:0 16px 44px rgba(0,0,0,.42);position:sticky;top:0;z-index:20;backdrop-filter: blur(6px);}
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .brand img{height:44px;width:auto;display:block}
+    .brand h1{font-size:15px;margin:0;letter-spacing:.14em}
+    .brand .sub{font-size:12px;color:var(--mut);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .pill{font-size:12px;color:var(--mut);border:1px solid var(--ln);padding:6px 10px;border-radius:999px;background:rgba(8,20,41,.55);white-space:nowrap}
+    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:14px;margin-top:14px}
+    @media (max-width:960px){.grid{grid-template-columns:1fr}}
+    .card{border:1px solid var(--ln);border-radius:14px;background:rgba(11,26,51,.70);padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.22)}
+    .card h2{font-size:12px;margin:0 0 10px;letter-spacing:.10em;color:var(--mut);text-transform:uppercase}
+    .k{font-size:11px;color:var(--mut);margin:6px 0 6px}
+    input,select,button,textarea{font:inherit;border-radius:12px;border:1px solid var(--ln);padding:10px 12px;background:rgba(8,20,41,.92);color:var(--ink);outline:none}
+    textarea{width:100%;min-height:90px;resize:vertical}
+    button{cursor:pointer}
+    button.primary{border-color:rgba(99,168,255,.55);background:rgba(99,168,255,.14)}
+    button.good{border-color:rgba(45,212,191,.55);background:rgba(45,212,191,.12)}
+    button.bad{border-color:rgba(251,113,133,.55);background:rgba(251,113,133,.12)}
+    button.ghost{background:transparent}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:620px){.two{grid-template-columns:1fr}}
+    .mono{font-family:var(--mono);font-size:12px;color:var(--mut);white-space:pre-wrap;border:1px solid var(--ln);
+      background:rgba(8,20,41,.70);padding:10px 12px;border-radius:12px;max-height:260px;overflow:auto}
+    .tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    .tab{padding:8px 10px;border-radius:999px;border:1px solid var(--ln);color:var(--mut);background:rgba(8,20,41,.55);cursor:pointer;user-select:none}
+    .tab.active{border-color:rgba(99,168,255,.55);color:var(--ink);background:rgba(99,168,255,.12)}
+    .hidden{display:none !important}
+    .hr{height:1px;background:var(--ln);margin:12px 0}
+    .notice{border:1px dashed rgba(251,191,36,.55);background:rgba(251,191,36,.08);padding:10px 12px;border-radius:12px;color:var(--mut);font-size:12px}
+    .okbox{border:1px dashed rgba(45,212,191,.55);background:rgba(45,212,191,.08);padding:10px 12px;border-radius:12px;color:var(--mut);font-size:12px}
+    .danger{border:1px dashed rgba(251,113,133,.55);background:rgba(251,113,133,.08);padding:10px 12px;border-radius:12px;color:var(--mut);font-size:12px}
+    .badge{font-size:11px;border:1px solid var(--ln);padding:3px 8px;border-radius:999px;color:var(--mut);background:rgba(8,20,41,.55)}
+    footer{margin-top:14px;padding:10px 0;text-align:center;color:var(--mut);font-size:11px;opacity:.92}
+    .legal{font-size:10px;opacity:.85;margin-top:6px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:99}
+    .modal{width:min(780px, 100%);border:1px solid var(--ln);border-radius:14px;background:linear-gradient(180deg, rgba(11,26,51,.98), rgba(8,20,41,.94));
+      padding:14px;box-shadow:0 22px 70px rgba(0,0,0,.55)}
+    .modal h3{margin:0 0 8px;font-size:13px;letter-spacing:.10em;color:var(--mut);text-transform:uppercase}
+    .btnbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <img src="assets/axis_logo.png" alt="AXIS BLUE" onerror="this.style.display='none'"/>
+        <div style="min-width:0">
+          <h1>AXIS BLUE</h1>
+          <div class="sub">Field Intelligence Console</div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="pill" id="pillBuild">build: —</span>
+        <span class="pill" id="pillNet">net: —</span>
+        <span class="pill" id="pillQueue">queue: —</span>
+        <span class="pill" id="pillAuth">auth: signed out</span>
+        <button class="ghost" id="btnConfig">Config</button>
+        <button class="ghost" id="btnSignOutTop" disabled>Sign out</button>
+      </div>
+    </header>
+
+    <!-- LOGIN ONLY -->
+    <div id="viewLogin" class="grid">
+      <div class="card">
+        <h2>Secure Access</h2>
+        <div class="notice" id="cfgNotice" style="margin-bottom:10px">
+          Supabase config not set. Click <b>Config</b> and paste URL + Anon Key.
+        </div>
+
+        <div class="two">
+          <div>
+            <div class="k">Email</div>
+            <input id="loginEmail" placeholder="you@axisblue.io" autocomplete="username"/>
+          </div>
+          <div>
+            <div class="k">Password</div>
+            <input id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+          </div>
+        </div>
+
+        <div class="btnbar">
+          <button class="primary" id="btnLogin">Sign in</button>
+          <button class="ghost" id="btnLoginTest">Test Config</button>
+        </div>
+
+        <div class="mono" id="logLogin">Waiting…</div>
+      </div>
+
+      <div class="card">
+        <h2>Notes</h2>
+        <div class="mono">
+- This page stays locked until sign-in succeeds.
+- Run Day and Intelligence are separate tabs after login.
+- NFC: iOS Safari cannot reliably read NFC on the web. We support NFC via iOS Shortcut deep-link as a bridge.
+        </div>
+        <div class="danger" style="margin-top:10px">
+          Don’t paste keys into chat. This app stores Supabase config locally on your device.
+        </div>
+      </div>
+    </div>
+
+    <!-- APP (hidden until authed) -->
+    <div id="viewApp" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Dashboard</h2>
+          <div class="tabs" id="tabs">
+            <div class="tab active" data-tab="runday">Run Day</div>
+            <div class="tab" data-tab="visit">Visit</div>
+            <div class="tab" data-tab="capture">Capture</div>
+            <div class="tab" data-tab="intel">Intelligence</div>
+            <div class="tab" data-tab="mgmt">Management</div>
+            <div class="tab" data-tab="history">History</div>
+          </div>
+
+          <!-- RUN DAY -->
+          <div id="tab_runday">
+            <div class="row">
+              <button class="good" id="btnStartDay">Start Day</button>
+              <button class="bad" id="btnEndDay" disabled>End Day</button>
+              <span class="pill" id="pillDay">day: none</span>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="k">Today’s stores (select or add)</div>
+            <div class="two">
+              <div>
+                <select id="storeSelect" multiple size="6" style="width:100%">
+                  <option>Walmart 1492</option>
+                  <option>King Soopers 00014</option>
+                  <option>Target SC 1471</option>
+                  <option>Family Dollar 3477</option>
+                </select>
+                <div class="row" style="margin-top:10px">
+                  <input id="storeAdd" placeholder="Add store name…"/>
+                  <button class="primary" id="btnAddStore">Add</button>
+                </div>
+              </div>
+              <div>
+                <div class="k">Morning Rundown builder (per selected store)</div>
+                <textarea id="morningNotes" placeholder="Template notes / priorities for the day…"></textarea>
+                <div class="row" style="margin-top:10px">
+                  <button class="primary" id="btnBuildRundown">Generate Morning Rundown</button>
+                  <button class="ghost" id="btnCopyRundown">Copy</button>
+                  <button class="ghost" id="btnEmailRundown">Email Draft</button>
+                </div>
+                <div class="mono" id="outRundown">Select stores, then generate…</div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+            <div class="k">Day Notes</div>
+            <textarea id="dayNotes" placeholder="General day notes…"></textarea>
+            <div class="row" style="margin-top:10px">
+              <button class="primary" id="btnSaveDayNotes" disabled>Save Day Notes</button>
+              <span class="badge" id="badgeOffline" class="hidden">offline</span>
+            </div>
+            <div class="mono" id="logDay"></div>
+          </div>
+
+          <!-- VISIT -->
+          <div id="tab_visit" class="hidden">
+            <div class="row">
+              <span class="pill" id="pillVisit">visit: none</span>
+              <span class="pill" id="pillStore">store: —</span>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="k">Start Visit</div>
+            <div class="two">
+              <div>
+                <div class="k">Store</div>
+                <input id="visitStore" placeholder="Store name (or pick from Run Day)"/>
+                <div class="k" style="margin-top:8px">Visit type</div>
+                <select id="visitType">
+                  <option value="merch">Merch / Execution</option>
+                  <option value="audit">Audit / Follow-up</option>
+                  <option value="intel">Intelligence Capture</option>
+                </select>
+                <div class="row" style="margin-top:10px">
+                  <button class="good" id="btnStartVisit" disabled>Start Visit</button>
+                  <button class="bad" id="btnEndVisit" disabled>End Visit</button>
+                </div>
+              </div>
+              <div>
+                <div class="k">Visit Notes (OOS, breakage, opportunities, comments)</div>
+                <textarea id="visitNotes" placeholder="Keep it blunt and useful…"></textarea>
+                <div class="row" style="margin-top:10px">
+                  <button class="primary" id="btnSaveVisitNotes" disabled>Save Visit Notes</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+            <div class="k">End Visit checklist (guardrails)</div>
+            <div class="two">
+              <div>
+                <label class="k"><input type="checkbox" id="chkPhotos"/> Photos captured</label><br/>
+                <label class="k"><input type="checkbox" id="chkCredits"/> Credits documented (if applicable)</label><br/>
+                <label class="k"><input type="checkbox" id="chkCoolers"/> Coolers checked (if applicable)</label><br/>
+                <label class="k"><input type="checkbox" id="chkPremier"/> PREMIER steps completed (attestation)</label><br/>
+              </div>
+              <div class="mono" id="logVisit"></div>
+            </div>
+          </div>
+
+          <!-- CAPTURE -->
+          <div id="tab_capture" class="hidden">
+            <div class="row">
+              <span class="pill" id="pillBucket">bucket: events</span>
+              <span class="pill" id="pillCapMode">mode: visit</span>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="two">
+              <div>
+                <div class="k">Photo category</div>
+                <select id="photoCat">
+                  <option value="salesfloor">Sales Floor</option>
+                  <option value="backroom">Backroom</option>
+                  <option value="credits">Credits</option>
+                  <option value="coolers">Coolers</option>
+                </select>
+                <div class="k" style="margin-top:8px">Select photo(s)</div>
+                <input id="photoFiles" type="file" accept="image/*" capture="environment" multiple/>
+                <div class="btnbar">
+                  <button class="primary" id="btnUploadPhotos" disabled>Upload Photo(s)</button>
+                  <button class="ghost" id="btnExportManifest" disabled>Export Manifest</button>
+                </div>
+                <div class="mono" id="logCap"></div>
+              </div>
+
+              <div>
+                <div class="k">Scan (QR + Barcode)</div>
+                <div class="notice">Uses browser BarcodeDetector if supported. If not, you’ll type it in manually. This is normal.</div>
+                <div class="btnbar">
+                  <button class="primary" id="btnScan" disabled>Scan</button>
+                  <button class="ghost" id="btnManualScan" disabled>Manual Entry</button>
+                </div>
+                <div class="k">Result</div>
+                <input id="scanValue" placeholder="Scan result…" readonly/>
+                <div class="k" style="margin-top:8px">Issue type</div>
+                <select id="issueType">
+                  <option value="oos">Out of stock</option>
+                  <option value="low">Low</option>
+                  <option value="damage">Damaged</option>
+                  <option value="misplaced">Misplaced</option>
+                  <option value="other">Other</option>
+                </select>
+                <div class="k" style="margin-top:8px">Qty estimate</div>
+                <input id="issueQty" placeholder="e.g. 0, 2 cases, 6 units…"/>
+                <div class="k" style="margin-top:8px">Notes</div>
+                <textarea id="issueNotes" placeholder="Short + useful…"></textarea>
+                <div class="btnbar">
+                  <button class="primary" id="btnSaveIssue" disabled>Save Issue</button>
+                </div>
+                <div class="mono" id="logScan"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- INTELLIGENCE -->
+          <div id="tab_intel" class="hidden">
+            <div class="notice">
+              NFC on iOS web is bridged via Shortcut. When your Shortcut reads NFC, open:
+              <span class="badge" id="nfcHint">https://aptest.axisblue.io/\?nfc\=PAYLOAD\</span\>
+            </div>
+            <div class="two" style="margin-top:10px">
+              <div>
+                <div class="k">NFC payload (from Shortcut deep-link, optional)</div>
+                <input id="intelNfc" placeholder="NFC payload…"/>
+                <div class="k" style="margin-top:8px">UPC / Identifier</div>
+                <input id="intelUpc" placeholder="UPC / SKU…"/>
+                <div class="k" style="margin-top:8px">Notes</div>
+                <textarea id="intelNotes" placeholder="Shelf/tag/product context…"></textarea>
+                <div class="btnbar">
+                  <button class="primary" id="btnSaveIntel" disabled>Save Intelligence Record</button>
+                </div>
+                <div class="mono" id="logIntel"></div>
+              </div>
+              <div>
+                <div class="k">Attach photos (product + tag)</div>
+                <input id="intelPhotos" type="file" accept="image/*" capture="environment" multiple/>
+                <div class="btnbar">
+                  <button class="primary" id="btnUploadIntel" disabled>Upload Intel Photo(s)</button>
+                </div>
+                <div class="mono" id="logIntelPhotos"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MANAGEMENT -->
+          <div id="tab_mgmt" class="hidden">
+            <div class="two">
+              <div>
+                <div class="k">End-of-Day Summary (generated)</div>
+                <textarea id="eodOut" placeholder="Generate by ending your day…"></textarea>
+                <div class="btnbar">
+                  <button class="ghost" id="btnCopyEod" disabled>Copy</button>
+                  <button class="ghost" id="btnEmailEod" disabled>Email Draft</button>
+                  <button class="ghost" id="btnTeamsEod" disabled>Teams Paste</button>
+                </div>
+                <div class="mono" id="logMgmt"></div>
+              </div>
+              <div>
+                <div class="k">Urgent Flag (separate + highlighted)</div>
+                <textarea id="urgentText" placeholder="Urgent issues that need immediate attention…"></textarea>
+                <div class="btnbar">
+                  <button class="primary" id="btnSaveUrgent" disabled>Save Urgent</button>
+                </div>
+                <div class="mono" id="logUrgent"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- HISTORY -->
+          <div id="tab_history" class="hidden">
+            <div class="notice">
+              This app stores event logs in Supabase Storage under the <b>events</b> bucket by default.
+              History view here shows your local cached days and last actions.
+            </div>
+            <div class="mono" id="historyOut"></div>
+          </div>
+
+        </div>
+
+        <div class="card">
+          <h2>Status</h2>
+          <div class="okbox" id="statusBox">Signed out.</div>
+          <div class="hr"></div>
+          <div class="mono" id="logSys"></div>
+        </div>
+      </div>
+
+      <footer>
+        AXIS BLUE is an independent operational tool. Not an official product of any corporation.
+        <div class="legal">Use subject to internal policy, privacy expectations, and applicable law.</div>
+      </footer>
+    </div>
+
+    <!-- CONFIG MODAL -->
+    <div id="cfgModal" class="modal-backdrop hidden">
+      <div class="modal">
+        <h3>Config (stored locally)</h3>
+        <div class="notice">
+          Paste your <b>Supabase Project URL</b> and <b>Anon Key</b>. Stored only in your browser (localStorage).
+          If you already pasted a key in chat earlier, rotate it in Supabase.
+        </div>
+        <div class="two" style="margin-top:10px">
+          <div>
+            <div class="k">Supabase URL</div>
+            <input id="cfgUrl" placeholder="https://xxxx.supabase.co"/>
+          </div>
+          <div>
+            <div class="k">Supabase Anon Key</div>
+            <input id="cfgKey" placeholder="eyJhbGciOi..."/>
+          </div>
+        </div>
+        <div class="two" style="margin-top:10px">
+          <div>
+            <div class="k">Storage bucket for photos</div>
+            <input id="cfgPhotoBucket" placeholder="work-photos" value="work-photos"/>
+          </div>
+          <div>
+            <div class="k">Storage bucket for event logs</div>
+            <input id="cfgEventBucket" placeholder="events" value="events"/>
+          </div>
+        </div>
+
+        <div class="btnbar">
+          <button class="primary" id="cfgSave">Save</button>
+          <button class="ghost" id="cfgClose">Close</button>
+          <button class="ghost" id="cfgClear">Clear</button>
+        </div>
+        <div class="mono" id="cfgLog"></div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+/* ========= AXIS BLUE single-file app =========
+   - Static Cloudflare Pages
+   - Supabase Auth + Storage via REST calls (no bundlers)
+   - Offline queue for events
+   - Deterministic storage paths
+*/
+
+(function(){
+  const BUILD = "AB-" + new Date().toISOString();
+  const $ = (id)=>document.getElementById(id);
+  const log = (id,msg)=>{ const el=$(id); el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + (el.textContent||""); };
+  const setPill = (id,txt)=>{ $(id).textContent = txt; };
+  const show = (id,on)=>$(id).classList.toggle("hidden", !on);
+
+  // Networking status
+  function refreshNet(){
+    setPill("pillNet", "net: " + (navigator.onLine ? "online" : "offline"));
+    $("badgeOffline").textContent = navigator.onLine ? "" : "OFFLINE";
+  }
+  window.addEventListener("online", refreshNet);
+  window.addEventListener("offline", refreshNet);
+
+  // Local storage keys
+  const LS_CFG = "axis_cfg_v1";
+  const LS_STATE = "axis_state_v1";
+  const LS_QUEUE = "axis_queue_v1";
+
+  // App state
+  let cfg = loadCfg();
+  let auth = { token:null, user:null }; // token = access_token
+  let state = loadState();             // day_id, visit_id, selected stores, manifests, etc.
+  let queue = loadQueue();             // queued events for offline or retry
+  let manifest = [];                   // per-visit uploaded object list (local)
+
+  // UI init
+  $("pillBuild").textContent = "build: " + BUILD;
+  refreshNet();
+  setPill("pillQueue", "queue: " + queue.length);
+
+  // Config modal
+  $("btnConfig").onclick = () => openCfg();
+  $("cfgClose").onclick = () => closeCfg();
+  $("cfgSave").onclick = () => saveCfgFromUI();
+  $("cfgClear").onclick = () => { localStorage.removeItem(LS_CFG); cfg = loadCfg(); log("cfgLog","cleared"); paintConfigNotice(); };
+
+  // Tabs
+  const tabs = Array.from(document.querySelectorAll(".tab"));
+  function setTab(name){
+    tabs.forEach(t=>t.classList.toggle("active", t.dataset.tab===name));
+    ["runday","visit","capture","intel","mgmt","history"].forEach(n=>{
+      $("tab_"+n).classList.toggle("hidden", n!==name);
+    });
+    if(name==="history") renderHistory();
+  }
+  tabs.forEach(t=>t.onclick=()=>setTab(t.dataset.tab));
+
+  // Login actions
+  $("btnLoginTest").onclick = async ()=> {
+    if(!cfg.url || !cfg.key) return log("logLogin","Config missing.");
+    log("logLogin","Config looks present. (No network call needed.)");
+  };
+
+  $("btnLogin").onclick = async ()=>{
+    if(!cfg.url || !cfg.key){ openCfg(); return; }
+    const email = $("loginEmail").value.trim();
+    const password = $("loginPass").value;
+    if(!email || !password) return log("logLogin","Enter email + password.");
+    try{
+      const res = await fetch(cfg.url + "/auth/v1/token?grant_type=password", {
+        method:"POST",
+        headers: {
+          "apikey": cfg.key,
+          "Content-Type":"application/json"
+        },
+        body: JSON.stringify({ email, password })
+      });
+      const j = await res.json();
+      if(!res.ok) throw new Error(j.error_description || j.msg || "Sign-in failed");
+      auth.token = j.access_token;
+      auth.user = j.user;
+      $("pillAuth").textContent = "auth: " + (auth.user?.email || "signed in");
+      $("btnSignOutTop").disabled = false;
+      log("logLogin","Signed in: " + (auth.user?.email || "ok"));
+      enterApp();
+      // attempt flush queue
+      flushQueue().catch(()=>{});
+    }catch(e){
+      log("logLogin","Sign-in error: " + e.message);
+    }
+  };
+
+  $("btnSignOutTop").onclick = ()=>{
+    auth.token=null; auth.user=null;
+    $("pillAuth").textContent="auth: signed out";
+    $("btnSignOutTop").disabled=true;
+    exitApp();
+  };
+
+  // Enter/exit
+  function enterApp(){
+    show("viewLogin", false);
+    show("viewApp", true);
+    $("statusBox").textContent = "Signed in.";
+    paintRunDayState();
+    paintVisitState();
+    paintCaptureState();
+    paintIntelState();
+    enableButtonsByState();
+    // deep-link NFC support
+    const url = new URL(location.href);
+    const nfc = url.searchParams.get("nfc");
+    if(nfc){
+      $("intelNfc").value = nfc;
+      setTab("intel");
+      log("logIntel","Loaded NFC payload from URL.");
+      url.searchParams.delete("nfc");
+      history.replaceState({}, "", url.toString());
+    }
+  }
+  function exitApp(){
+    show("viewLogin", true);
+    show("viewApp", false);
+    $("statusBox").textContent = "Signed out.";
+  }
+
+  // Initial notice
+  paintConfigNotice();
+  if(cfg.url && cfg.key){
+    $("cfgNotice").classList.add("hidden");
+  }
+
+  // Start Day / End Day
+  $("btnStartDay").onclick = async ()=>{
+    if(!auth.token) return;
+    state.day = "DAY-" + cryptoRand(10);
+    state.day_started_at = new Date().toISOString();
+    state.day_notes = "";
+    state.visits = [];
+    state.morning = null;
+    state.urgent = "";
+    saveState(state);
+
+    log("logDay","Day started: " + state.day);
+    $("pillDay").textContent = "day: " + state.day;
+    $("btnEndDay").disabled = false;
+    $("btnSaveDayNotes").disabled = false;
+    $("btnStartVisit").disabled = false;
+    enableButtonsByState();
+
+    // record event
+    recordEvent({ kind:"day_start", day:state.day, at:state.day_started_at });
+  };
+
+  $("btnEndDay").onclick = async ()=>{
+    if(!state.day) return;
+    state.day_ended_at = new Date().toISOString();
+    saveState(state);
+
+    // generate EOD summary
+    const summary = buildEodSummary();
+    $("eodOut").value = summary;
+    $("btnCopyEod").disabled = false;
+    $("btnEmailEod").disabled = false;
+    $("btnTeamsEod").disabled = false;
+
+    log("logDay","Day ended.");
+    recordEvent({ kind:"day_end", day:state.day, at: state.day_ended_at, eod: summary, urgent: state.urgent || "" });
+  };
+
+  $("btnSaveDayNotes").onclick = ()=>{
+    state.day_notes = $("dayNotes").value || "";
+    saveState(state);
+    log("logDay","Saved day notes.");
+    recordEvent({ kind:"day_notes", day:state.day, notes: state.day_notes });
+  };
+
+  // Store selection + morning rundown
+  $("btnAddStore").onclick = ()=>{
+    const s = $("storeAdd").value.trim();
+    if(!s) return;
+    const opt = document.createElement("option");
+    opt.textContent = s;
+    $("storeSelect").appendChild(opt);
+    $("storeAdd").value="";
+  };
+
+  $("btnBuildRundown").onclick = ()=>{
+    const selected = Array.from($("storeSelect").selectedOptions).map(o=>o.textContent);
+    state.selectedStores = selected;
+    const base = $("morningNotes").value || "";
+    const out = buildMorningRundown(selected, base);
+    $("outRundown").textContent = out;
+    state.morning = out;
+    saveState(state);
+    recordEvent({ kind:"morning_rundown", day: state.day || null, stores: selected, text: out });
+  };
+
+  $("btnCopyRundown").onclick = ()=>{
+    copyToClipboard($("outRundown").textContent || "");
+  };
+  $("btnEmailRundown").onclick = ()=>{
+    const body = encodeURIComponent($("outRundown").textContent || "");
+    const subj = encodeURIComponent("AXIS BLUE — Morning Rundown");
+    location.href = `mailto:?subject=${subj}&body=${body}`;
+  };
+
+  // Visit start/end + notes
+  $("btnStartVisit").onclick = ()=>{
+    const store = ($("visitStore").value || "").trim() || (state.selectedStores && state.selectedStores[0]) || "";
+    if(!store) return log("logVisit","Enter store name or select stores in Run Day.");
+    if(!state.day) return log("logVisit","Start Day first.");
+
+    const visit = {
+      id: "VIS-" + cryptoRand(10),
+      store,
+      type: $("visitType").value,
+      started_at: new Date().toISOString(),
+      ended_at: null,
+      notes: "",
+      checklist: { photos:false, credits:false, coolers:false, premier:false },
+      manifest: []
+    };
+    state.activeVisit = visit;
+    state.visits = state.visits || [];
+    state.visits.push(visit);
+    saveState(state);
+
+    $("pillVisit").textContent = "visit: " + visit.id;
+    $("pillStore").textContent = "store: " + store;
+    $("btnEndVisit").disabled = false;
+    $("btnSaveVisitNotes").disabled = false;
+
+    // capture enables
+    $("btnUploadPhotos").disabled = false;
+    $("btnScan").disabled = false;
+    $("btnManualScan").disabled = false;
+    $("btnSaveIssue").disabled = false;
+    $("btnExportManifest").disabled = false;
+
+    log("logVisit","Visit started: " + store + " (" + visit.type + ")");
+    recordEvent({ kind:"visit_start", day: state.day, visit_id: visit.id, store, visit_type: visit.type, at: visit.started_at });
+    paintCaptureState();
+    enableButtonsByState();
+  };
+
+  $("btnSaveVisitNotes").onclick = ()=>{
+    if(!state.activeVisit) return;
+    state.activeVisit.notes = $("visitNotes").value || "";
+    saveState(state);
+    log("logVisit","Saved visit notes.");
+    recordEvent({ kind:"visit_notes", day: state.day, visit_id: state.activeVisit.id, notes: state.activeVisit.notes });
+  };
+
+  $("btnEndVisit").onclick = ()=>{
+    if(!state.activeVisit) return;
+    // guardrails checklist
+    const checklist = {
+      photos: $("chkPhotos").checked,
+      credits: $("chkCredits").checked,
+      coolers: $("chkCoolers").checked,
+      premier: $("chkPremier").checked
+    };
+    if(!checklist.premier){
+      return log("logVisit","Cannot end visit: PREMIER attestation is required.");
+    }
+    state.activeVisit.ended_at = new Date().toISOString();
+    state.activeVisit.checklist = checklist;
+    saveState(state);
+
+    recordEvent({ kind:"visit_end", day: state.day, visit_id: state.activeVisit.id, at: state.activeVisit.ended_at, checklist, notes: state.activeVisit.notes || "" });
+
+    log("logVisit","Visit ended: " + state.activeVisit.id);
+    // lock visit actions but keep day running
+    state.activeVisit = null;
+    saveState(state);
+
+    $("pillVisit").textContent = "visit: none";
+    $("pillStore").textContent = "store: —";
+    $("btnEndVisit").disabled = true;
+    $("btnSaveVisitNotes").disabled = true;
+
+    // disable capture until next visit
+    $("btnUploadPhotos").disabled = true;
+    $("btnScan").disabled = true;
+    $("btnManualScan").disabled = true;
+    $("btnSaveIssue").disabled = true;
+    $("btnExportManifest").disabled = true;
+
+    paintVisitState();
+    paintCaptureState();
+    enableButtonsByState();
+  };
+
+  // Capture: Photos to Supabase Storage
+  $("btnUploadPhotos").onclick = async ()=>{
+    if(!state.activeVisit) return log("logCap","Start a visit first.");
+    const files = $("photoFiles").files;
+    if(!files || !files.length) return log("logCap","Select photo(s).");
+    const cat = $("photoCat").value;
+
+    for(const f of files){
+      const key = `${safe(state.day)}/${safe(state.activeVisit.id)}/${safe(cat)}/${Date.now()}_${safe(f.name)}`;
+      try{
+        if(!navigator.onLine){
+          // queue event; warn about photo upload offline (we can't store big blobs reliably here)
+          queuePush({ kind:"photo_pending", day:state.day, visit_id:state.activeVisit.id, category:cat, filename:f.name, key, note:"Offline: re-select and upload when online." });
+          log("logCap","OFFLINE: queued photo metadata only. Re-upload required when online.");
+          continue;
+        }
+        await supaUpload(cfg.photoBucket, key, f);
+        state.activeVisit.manifest.push({ key, bucket: cfg.photoBucket, category: cat, name: f.name, size: f.size, type: f.type, at: new Date().toISOString() });
+        saveState(state);
+        log("logCap","Uploaded: " + key);
+        recordEvent({ kind:"photo_upload", day:state.day, visit_id:state.activeVisit.id, category:cat, bucket:cfg.photoBucket, path:key, meta:{name:f.name,size:f.size,type:f.type} });
+      }catch(e){
+        queuePush({ kind:"photo_upload_retry", day:state.day, visit_id:state.activeVisit.id, category:cat, filename:f.name, key, error:e.message });
+        log("logCap","Upload failed; queued retry metadata: " + e.message);
+      }
+    }
+    setPill("pillQueue","queue: " + queue.length);
+  };
+
+  $("btnExportManifest").onclick = ()=>{
+    if(!state.activeVisit) return;
+    const lines = [];
+    lines.push(`STORE: ${state.activeVisit.store}`);
+    lines.push(`DAY: ${state.day}`);
+    lines.push(`VISIT: ${state.activeVisit.id}`);
+    lines.push("");
+    const grouped = {};
+    (state.activeVisit.manifest||[]).forEach(m=>{
+      grouped[m.category] = grouped[m.category] || [];
+      grouped[m.category].push(m);
+    });
+    Object.keys(grouped).forEach(cat=>{
+      lines.push(cat.toUpperCase() + "/");
+      grouped[cat].forEach(m=> lines.push("  " + m.path));
+      lines.push("");
+    });
+    const out = lines.join("\n");
+    downloadText(`${safe(state.activeVisit.store)}_${state.activeVisit.id}_manifest.txt`, out);
+    log("logCap","Manifest exported.");
+  };
+
+  // Scan: QR + Barcode
+  $("btnScan").onclick = async ()=>{
+    $("scanValue").value = "";
+    try{
+      const val = await scanWithBarcodeDetector(8000);
+      if(!val) { log("logScan","No code found."); return; }
+      $("scanValue").value = val;
+      log("logScan","Scanned: " + val);
+    }catch(e){
+      log("logScan","Scan not available: " + e.message);
+    }
+  };
+
+  $("btnManualScan").onclick = ()=>{
+    const val = prompt("Enter UPC/QR value:");
+    if(val){
+      $("scanValue").value = val;
+      log("logScan","Manual entry: " + val);
+    }
+  };
+
+  $("btnSaveIssue").onclick = ()=>{
+    if(!state.activeVisit) return log("logScan","Start a visit first.");
+    const val = $("scanValue").value.trim();
+    if(!val) return log("logScan","Scan or enter a value first.");
+    const issue = {
+      id: "ISS-" + cryptoRand(10),
+      day: state.day,
+      visit_id: state.activeVisit.id,
+      store: state.activeVisit.store,
+      value: val,
+      type: $("issueType").value,
+      qty: $("issueQty").value || "",
+      notes: $("issueNotes").value || "",
+      at: new Date().toISOString()
+    };
+    recordEvent({ kind:"issue", ...issue });
+    log("logScan","Saved issue: " + issue.type + " / " + val);
+    $("issueQty").value=""; $("issueNotes").value="";
+  };
+
+  // Intelligence
+  $("btnSaveIntel").onclick = ()=>{
+    const rec = {
+      id:"INT-" + cryptoRand(10),
+      nfc: $("intelNfc").value || "",
+      upc: $("intelUpc").value || "",
+      notes: $("intelNotes").value || "",
+      store: state.activeVisit?.store || "",
+      visit_id: state.activeVisit?.id || "",
+      day: state.day || "",
+      at: new Date().toISOString()
+    };
+    recordEvent({ kind:"intel", ...rec });
+    log("logIntel","Saved intelligence record.");
+  };
+
+  $("btnUploadIntel").onclick = async ()=>{
+    const files = $("intelPhotos").files;
+    if(!files || !files.length) return log("logIntelPhotos","Select photo(s).");
+    const base = `intel/${safe(state.day||"no_day")}/${safe(state.activeVisit?.id||"no_visit")}/${Date.now()}`;
+    for(const f of files){
+      const key = `${base}_${safe(f.name)}`;
+      try{
+        if(!navigator.onLine){
+          queuePush({ kind:"intel_photo_pending", key, filename:f.name, note:"Offline: re-select and upload when online." });
+          log("logIntelPhotos","OFFLINE: queued intel photo metadata only. Re-upload required when online.");
+          continue;
+        }
+        await supaUpload(cfg.photoBucket, key, f);
+        recordEvent({ kind:"intel_photo", bucket: cfg.photoBucket, path: key, meta:{name:f.name,size:f.size,type:f.type} });
+        log("logIntelPhotos","Uploaded intel photo: " + key);
+      }catch(e){
+        queuePush({ kind:"intel_photo_retry", key, filename:f.name, error:e.message });
+        log("logIntelPhotos","Upload failed; queued retry metadata: " + e.message);
+      }
+    }
+    setPill("pillQueue","queue: " + queue.length);
+  };
+
+  // Management outputs
+  $("btnSaveUrgent").onclick = ()=>{
+    state.urgent = $("urgentText").value || "";
+    saveState(state);
+    recordEvent({ kind:"urgent", day: state.day || null, text: state.urgent });
+    log("logUrgent","Saved urgent.");
+  };
+
+  $("btnCopyEod").onclick = ()=> copyToClipboard($("eodOut").value || "");
+  $("btnEmailEod").onclick = ()=>{
+    const subj = encodeURIComponent("AXIS BLUE — End of Day Summary");
+    const body = encodeURIComponent($("eodOut").value || "");
+    location.href = `mailto:?subject=${subj}&body=${body}`;
+  };
+  $("btnTeamsEod").onclick = ()=> copyToClipboard($("eodOut").value || "");
+
+  // Enable buttons based on auth/config
+  function enableButtonsByState(){
+    const ready = !!(cfg.url && cfg.key && auth.token);
+    $("btnStartDay").disabled = !ready;
+    $("btnSaveUrgent").disabled = !ready;
+    $("btnSaveIntel").disabled = !ready;
+    $("btnUploadIntel").disabled = !ready;
+    $("btnStartVisit").disabled = !ready || !state.day;
+    $("btnSaveDayNotes").disabled = !ready || !state.day;
+  }
+
+  // Helpers
+  function paintConfigNotice(){
+    if(cfg.url && cfg.key){
+      $("cfgNotice").classList.add("hidden");
+      $("cfgNotice").textContent = "";
+    }else{
+      $("cfgNotice").classList.remove("hidden");
+    }
+  }
+  function openCfg(){
+    show("cfgModal", true);
+    $("cfgUrl").value = cfg.url || "";
+    $("cfgKey").value = cfg.key || "";
+    $("cfgPhotoBucket").value = cfg.photoBucket || "work-photos";
+    $("cfgEventBucket").value = cfg.eventBucket || "events";
+    log("cfgLog","Opened config.");
+  }
+  function closeCfg(){ show("cfgModal", false); }
+  function saveCfgFromUI(){
+    cfg = {
+      url: ($("cfgUrl").value||"").trim(),
+      key: ($("cfgKey").value||"").trim(),
+      photoBucket: ($("cfgPhotoBucket").value||"work-photos").trim() || "work-photos",
+      eventBucket: ($("cfgEventBucket").value||"events").trim() || "events"
+    };
+    localStorage.setItem(LS_CFG, JSON.stringify(cfg));
+    log("cfgLog","Saved config locally.");
+    paintConfigNotice();
+    enableButtonsByState();
+    closeCfg();
+  }
+  function loadCfg(){
+    try{ return JSON.parse(localStorage.getItem(LS_CFG)||"{}"); }catch{ return {}; }
+  }
+  function loadState(){
+    try{ return JSON.parse(localStorage.getItem(LS_STATE)||"{}"); }catch{ return {}; }
+  }
+  function saveState(s){
+    localStorage.setItem(LS_STATE, JSON.stringify(s||{}));
+  }
+  function loadQueue(){
+    try{ return JSON.parse(localStorage.getItem(LS_QUEUE)||"[]"); }catch{ return []; }
+  }
+  function saveQueue(q){
+    localStorage.setItem(LS_QUEUE, JSON.stringify(q||[]));
+  }
+  function queuePush(evt){
+    queue.unshift({ ...evt, queued_at: new Date().toISOString() });
+    saveQueue(queue);
+    setPill("pillQueue","queue: " + queue.length);
+  }
+
+  function paintRunDayState(){
+    $("pillDay").textContent = state.day ? ("day: " + state.day) : "day: none";
+    $("btnEndDay").disabled = !state.day;
+    $("btnSaveDayNotes").disabled = !state.day;
+    $("dayNotes").value = state.day_notes || "";
+    $("urgentText").value = state.urgent || "";
+  }
+  function paintVisitState(){
+    if(state.activeVisit){
+      $("pillVisit").textContent = "visit: " + state.activeVisit.id;
+      $("pillStore").textContent = "store: " + state.activeVisit.store;
+      $("visitStore").value = state.activeVisit.store || "";
+      $("visitNotes").value = state.activeVisit.notes || "";
+      $("btnEndVisit").disabled = false;
+      $("btnSaveVisitNotes").disabled = false;
+    }else{
+      $("pillVisit").textContent = "visit: none";
+      $("pillStore").textContent = "store: —";
+      $("btnEndVisit").disabled = true;
+      $("btnSaveVisitNotes").disabled = true;
+    }
+  }
+  function paintCaptureState(){
+    $("pillBucket").textContent = "bucket: " + (cfg.eventBucket || "events");
+  }
+  function paintIntelState(){
+    // no-op
+  }
+
+  function buildMorningRundown(stores, base){
+    const day = state.day ? state.day : "(not started)";
+    const lines = [];
+    lines.push("AXIS BLUE — Morning Rundown");
+    lines.push("Day: " + day);
+    lines.push("Date: " + new Date().toLocaleDateString());
+    lines.push("");
+    if(!stores || !stores.length){
+      lines.push("No stores selected.");
+      return lines.join("\n");
+    }
+    stores.forEach((s,i)=>{
+      lines.push(`${i+1}. ${s}`);
+      lines.push("   - Delivery: (unknown)");
+      lines.push("   - Focus: coolers / credits / execution");
+      lines.push("   - Watchlist: OOS / low / displays");
+      lines.push("   - Notes: ");
+      lines.push("");
+    });
+    if(base){
+      lines.push("General priorities:");
+      lines.push(base.trim());
+    }
+    return lines.join("\n");
+  }
+
+  function buildEodSummary(){
+    const lines = [];
+    lines.push("AXIS BLUE — End of Day Summary");
+    lines.push("Day: " + (state.day||"—"));
+    lines.push("Date: " + new Date().toLocaleDateString());
+    lines.push("");
+    if(state.urgent){
+      lines.push("URGENT (needs immediate attention):");
+      lines.push(state.urgent.trim());
+      lines.push("");
+    }
+    lines.push("Visits:");
+    (state.visits||[]).forEach(v=>{
+      const ended = v.ended_at ? "ended" : "open";
+      lines.push(`- ${v.store} (${v.type}) [${ended}]`);
+      if(v.notes) lines.push(`  Notes: ${v.notes.trim()}`);
+      const issuesCount = "(issues logged in event stream)";
+      lines.push(`  ${issuesCount}`);
+    });
+    lines.push("");
+    lines.push("Photos:");
+    lines.push("  Stored in Supabase Storage with deterministic paths (day/visit/category).");
+    return lines.join("\n");
+  }
+
+  function copyToClipboard(text){
+    if(!text) return;
+    navigator.clipboard?.writeText(text).then(()=>log("logMgmt","Copied to clipboard.")).
+      catch(()=>{});
+  }
+
+  function downloadText(filename, text){
+    const blob = new Blob([text], {type:"text/plain"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function safe(s){ return (s||"").replace(/[^a-zA-Z0-9._-]+/g,"_"); }
+  function cryptoRand(n){
+    const bytes = new Uint8Array(n);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes).map(b=>(b%36).toString(36)).join("");
+  }
+
+  async function scanWithBarcodeDetector(timeoutMs){
+    if(!("BarcodeDetector" in window)) throw new Error("BarcodeDetector not supported in this browser.");
+    const detector = new BarcodeDetector({ formats: ["qr_code","ean_13","ean_8","upc_a","upc_e","code_128"] });
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio:false });
+    const video = document.createElement("video");
+    video.srcObject = stream; video.playsInline = true;
+    await video.play();
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const started = Date.now();
+    let found = "";
+    while(Date.now() - started < timeoutMs && !found){
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const codes = await detector.detect(canvas);
+      if(codes && codes.length){
+        found = codes[0].rawValue || "";
+        break;
+      }
+      await new Promise(r=>setTimeout(r, 120));
+    }
+    stream.getTracks().forEach(t=>t.stop());
+    return found;
+  }
+
+  // Supabase Storage upload (REST)
+  async function supaUpload(bucket, path, file){
+    if(!cfg.url || !cfg.key || !auth.token) throw new Error("Not configured or not signed in.");
+    const uploadUrl = `${cfg.url}/storage/v1/object/${encodeURIComponent(bucket)}/${path}`;
+    const res = await fetch(uploadUrl, {
+      method:"POST",
+      headers:{
+        "apikey": cfg.key,
+        "Authorization": "Bearer " + auth.token,
+        "x-upsert": "false"
+      },
+      body: file
+    });
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || j.error || ("Upload failed: " + res.status));
+    return true;
+  }
+
+  // Event recorder: writes JSON event logs to Supabase Storage events bucket.
+  async function recordEvent(evt){
+    const enriched = { ...evt, at: evt.at || new Date().toISOString(), user: auth.user?.email || null };
+    // Always store locally too, so you never “lose” a day if network dies.
+    queuePush({ kind:"event_local", payload: enriched });
+
+    if(!navigator.onLine){
+      log("logSys","Offline: event queued.");
+      return;
+    }
+
+    // Upload event file right away; if it fails, it stays queued.
+    try{
+      const day = safe(state.day || "no_day");
+      const visit = safe(state.activeVisit?.id || "no_visit");
+      const name = `${Date.now()}_${safe(enriched.kind||"event")}.json`;
+      const key = `${day}/${visit}/${name}`;
+      const blob = new Blob([JSON.stringify(enriched, null, 2)], {type:"application/json"});
+      await supaUpload(cfg.eventBucket || "events", key, blob);
+      log("logSys","Event stored: " + key);
+    }catch(e){
+      log("logSys","Event upload failed; queued: " + e.message);
+    }
+  }
+
+  async function flushQueue(){
+    // Minimal: we keep queue mainly as local record. (Avoids re-uploading photos blobs.)
+    // You can expand later to replay “event_local” entries by re-uploading their payloads.
+    log("logSys","Queue flush: " + queue.length + " item(s). (Local-first by design.)");
+  }
+
+  function renderHistory(){
+    const lines = [];
+    lines.push("Local state snapshot:");
+    lines.push(JSON.stringify(state, null, 2));
+    lines.push("");
+    lines.push("Queue length: " + queue.length);
+    $("historyOut").textContent = lines.join("\n");
+  }
+
+  // Pre-fill visit store from Run Day selection
+  $("storeSelect").addEventListener("change", ()=>{
+    const sel = Array.from($("storeSelect").selectedOptions).map(o=>o.textContent);
+    state.selectedStores = sel;
+    saveState(state);
+    if(sel[0]) $("visitStore").value = sel[0];
+  });
+
+  // Boot
+  $("pillAuth").textContent = "auth: signed out";
+  $("pillQueue").textContent = "queue: " + queue.length;
+  paintRunDayState();
+  paintVisitState();
+  paintCaptureState();
+  paintIntelState();
+  enableButtonsByState();
+
+  // If you were signed in, you’d still need a fresh token (we do not persist access tokens for safety).
+  // So app always starts locked until you sign in again.
+})();
+</script>
+</body>
+</html>
