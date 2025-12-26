@@ -1,9 +1,15 @@
+// functions/_middleware.js
 export async function onRequest(context) {
   const res = await context.next();
-  const headers = new Headers(res.headers);
-  headers.set("X-Content-Type-Options", "nosniff");
-  headers.set("X-Frame-Options", "DENY");
-  headers.set("Referrer-Policy", "no-referrer");
-  headers.set("Permissions-Policy", "camera=(self), microphone=(), geolocation=(self), nfc=(self)");
-  return new Response(res.body, { status: res.status, headers });
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) return res;
+
+  const commit =
+    (context.env?.CF_PAGES_COMMIT_SHA || context.env?.CF_PAGES_COMMIT_HASH || "").slice(0,7) || "unknown";
+
+  const html = await res.text();
+  const out = html.replaceAll("__BUILD_ID__", commit);
+
+  return new Response(out, { status: res.status, headers: res.headers });
 }
