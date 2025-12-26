@@ -2,186 +2,102 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AXIS BLUE • Field Console</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="wrap">
-    <div class="topbar">
+    <header class="topbar">
       <div class="brand">
-        <div class="logoBox">
-          <img src="assets/axis_logo.png" alt="AXIS BLUE" onerror="this.style.display='none'"/>
-        </div>
-        <div class="hgroup">
-          <h1>AXIS BLUE</h1>
-          <div class="sub">Field Console • aptest.axisblue.io</div>
+        <img class="brandLogo" src="assets/axis_logo.png" alt="AXIS BLUE" onerror="this.style.display='none'"/>
+        <div class="brandText">
+          <div class="brandTitle">AXIS BLUE</div>
+          <div class="brandSub">Field Console • <span class="muted">aptest.axisblue.io</span></div>
         </div>
       </div>
+
       <div class="chips">
-        <span class="chip">ENV: <span id="envBadge" class="badge warn">…</span></span>
-        <span class="chip">HEALTH: <span id="healthBadge" class="badge warn">…</span></span>
-        <span class="chip">AUTH: <span id="authBadge" class="badge warn">CFG</span></span>
-        <span class="chip">SYNC: <span id="syncBadge" class="badge good">OK</span></span>
+        <span class="chip" id="chipEnv">ENV: …</span>
+        <span class="chip" id="chipHealth">HEALTH: …</span>
+        <span class="chip" id="chipAuth">AUTH: CFG</span>
+        <span class="chip" id="chipSync">SYNC: OK</span>
         <span class="chip">BUILD: <span class="badge">__BUILD_ID__</span></span>
       </div>
-    </div>
+    </header>
 
-    <div class="card">
-      <h2>Secure Access</h2>
-      <div class="small">Sign in to access your Day plan, Visit workflow, Capture/Scan tools, and reports.</div>
+    <section class="card notice">
+      Internal field tooling. Not an official product of any corporation. Use in accordance with applicable policies and local laws.
+    </section>
 
-      <div class="hr"></div>
+    <section class="card" id="authCard">
+      <div class="cardTitle">Secure Access</div>
+      <div class="cardSubtitle">Sign in to access your Day plan, Visit workflow, Capture/Scan tools, and reports.</div>
 
-      <div class="row" style="justify-content:space-between">
-        <div class="row">
-          <button class="btn" id="btnConfig">Config</button>
-          <button class="btn ghost" id="btnDiagnostics">Diagnostics</button>
-        </div>
-        <div class="row">
-          <button class="btn ghost" id="btnSignOutTop" disabled>Sign out</button>
-        </div>
+      <div class="row gap">
+        <button class="btn" id="btnConfig">Config</button>
+        <button class="btn" id="btnDiagnostics">Diagnostics</button>
+        <button class="btn ghost right" id="btnSignOut" disabled>Sign out</button>
       </div>
 
       <div class="grid2">
-        <div>
-          <label>Email</label>
-          <input id="email" placeholder="you@axisblue.io" autocomplete="username" />
-        </div>
-        <div>
-          <label>Password</label>
-          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
-        </div>
+        <label class="field">
+          <div class="label">Email</div>
+          <input id="email" type="email" autocomplete="username" placeholder="you@axisblue.io"/>
+        </label>
+
+        <label class="field">
+          <div class="label">Password</div>
+          <input id="password" type="password" autocomplete="current-password" placeholder="••••••••"/>
+        </label>
       </div>
 
-      <div class="row" style="margin-top:10px">
+      <div class="row gap">
         <button class="btn primary" id="btnSignIn">Sign In</button>
         <button class="btn" id="btnTestConfig">Test Config</button>
-        <span class="badge warn" id="statusText">Waiting…</span>
+        <div class="pill" id="authStatus">Waiting…</div>
       </div>
 
-      <div class="hr"></div>
+      <div class="row gap tiny">
+        <a class="miniBtn" href="/env" target="_blank" rel="noopener">/env</a>
+        <a class="miniBtn" href="/health" target="_blank" rel="noopener">/health</a>
+        <button class="miniBtn" id="btnDiagInline">Diagnostics</button>
+      </div>
+    </section>
 
-      <div class="row">
-        <button class="btn" id="btnEnv">/env</button>
-        <button class="btn" id="btnHealth">/health</button>
-        <button class="btn" id="btnDiag2">Diagnostics</button>
+    <section class="card dim" id="dashboardCard">
+      <div class="cardTitle">Dashboard</div>
+
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="run">Run Day</button>
+        <button class="tab" data-tab="visit">Visit</button>
+        <button class="tab" data-tab="capture">Capture</button>
+        <button class="tab" data-tab="intel">Intelligence</button>
+        <button class="tab" data-tab="mgmt">Management</button>
+        <button class="tab" data-tab="history">History</button>
       </div>
 
-      <div class="small" style="margin-top:10px">
-        Internal field tooling. Not an official product of any corporation. Use in accordance with applicable policies and local laws.
-      </div>
-    </div>
+      <div class="panel" id="panel_run"></div>
+      <div class="panel hidden" id="panel_visit"></div>
+      <div class="panel hidden" id="panel_capture"></div>
+      <div class="panel hidden" id="panel_intel"></div>
+      <div class="panel hidden" id="panel_mgmt"></div>
+      <div class="panel hidden" id="panel_history"></div>
+    </section>
 
-    <div class="card" id="appCard" style="opacity:.55;pointer-events:none">
-      <h2>Dashboard</h2>
-      <div class="tabs">
-        <div class="tab active" data-tab="day">Run Day</div>
-        <div class="tab" data-tab="visit">Visit</div>
-        <div class="tab" data-tab="capture">Capture</div>
-        <div class="tab" data-tab="intel">Intelligence</div>
-        <div class="tab" data-tab="mgmt">Management</div>
-        <div class="tab" data-tab="history">History</div>
-      </div>
-
-      <div id="tab_day" style="margin-top:12px">
-        <div class="row">
-          <button class="btn primary" id="btnStartDay">Start Day</button>
-          <button class="btn" id="btnEndDay">End Day</button>
-          <span class="badge" id="dayState">day: none</span>
-        </div>
-
-        <label>Today's stores (select or add)</label>
-        <div class="row">
-          <input id="storeInput" placeholder="Add store name…" />
-          <button class="btn" id="btnAddStore">Add</button>
-        </div>
-        <div class="log" id="storeList" style="margin-top:10px">0 items</div>
-
-        <label>Morning Rundown builder (per selected store)</label>
-        <textarea id="morningNotes" placeholder="Template notes / priorities for the day..."></textarea>
-
-        <div class="row" style="margin-top:10px">
-          <button class="btn primary" id="btnMorning">Generate Morning Rundown</button>
-          <button class="btn" id="btnCopyMorning">Copy</button>
-        </div>
-        <div class="log" id="morningOut" style="margin-top:10px">—</div>
-      </div>
-
-      <div id="tab_visit" style="display:none;margin-top:12px">
-        <div class="small">Visit workflow UI lives here (start visit → photos by category → OOS/Credits → end visit report).</div>
-        <div class="log" style="margin-top:10px">Baseline placeholder: visit UI stays locked until auth is working.</div>
-      </div>
-
-      <div id="tab_capture" style="display:none;margin-top:12px">
-        <div class="small">Capture/Scan tools (barcode/QR, tag photo required, NFC iOS fallback) live here.</div>
-        <div class="log" style="margin-top:10px">Baseline placeholder: capture UI stays locked until auth is working.</div>
-      </div>
-
-      <div id="tab_intel" style="display:none;margin-top:12px">
-        <div class="small">Intelligence capture and notes.</div>
-        <div class="log" style="margin-top:10px">Baseline placeholder.</div>
-      </div>
-
-      <div id="tab_mgmt" style="display:none;margin-top:12px">
-        <div class="small">Management output, copy/email draft hooks.</div>
-        <div class="log" style="margin-top:10px">Baseline placeholder.</div>
-      </div>
-
-      <div id="tab_history" style="display:none;margin-top:12px">
-        <div class="small">History of days/visits stored in Supabase once auth works.</div>
-        <div class="log" style="margin-top:10px">Baseline placeholder.</div>
-      </div>
-
-      <div class="footer">
-        <div>AXIS BLUE • Private test</div>
-        <div id="footStatus">supabase: pending</div>
-      </div>
-    </div>
+    <footer class="footer">
+      <div>AXIS BLUE • Private test</div>
+      <div class="muted" id="footerSupabase">supabase: pending</div>
+    </footer>
   </div>
 
-  <!-- Config modal -->
-  <div class="modalBack" id="modalBack">
-    <div class="modal">
-      <h3>CONFIG (STORED LOCALLY)</h3>
-      <div class="small">
-        Paste your Supabase Project URL + Anon Key. Stored only in your browser (localStorage).
-        If you accidentally pasted a key somewhere public, rotate it in Supabase.
-      </div>
+  <!-- 1) MUST load supabase-js library first -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-      <div class="grid2" style="margin-top:10px">
-        <div>
-          <label>Supabase URL</label>
-          <input id="cfgUrl" placeholder="https://xxxx.supabase.co" />
-        </div>
-        <div>
-          <label>Supabase Anon Key</label>
-          <input id="cfgKey" placeholder="eyJhbGciOi..." />
-        </div>
-      </div>
-
-      <div class="grid2" style="margin-top:10px">
-        <div>
-          <label>Storage bucket for photos</label>
-          <input id="cfgPhotos" placeholder="work-photos" />
-        </div>
-        <div>
-          <label>Storage bucket for event logs</label>
-          <input id="cfgEvents" placeholder="events" />
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:10px">
-        <button class="btn primary" id="cfgSave">Save</button>
-        <button class="btn" id="cfgClose">Close</button>
-        <button class="btn ghost" id="cfgClear">Clear</button>
-      </div>
-
-      <div class="log" id="cfgLog" style="margin-top:10px">—</div>
-    </div>
-  </div>
-
+  <!-- 2) Then our client wrapper (creates window.supabase) -->
   <script src="supabaseClient.js"></script>
+
+  <!-- 3) Then the app -->
   <script src="app.js"></script>
 </body>
 </html>
