@@ -1,319 +1,301 @@
-// axis-blue-web/app.js
-import { supabase } from "./supabaseClient.js";
+/* AXIS BLUE — Web Online (Test)
+   app.js — wires Supabase auth + Day + Visit + Notes
+*/
 
-/**
- * AXIS BLUE – App Test (static UI + Supabase)
- * This file focuses on:
- * - Auth (sign-in/sign-out)
- * - Begin Day (axis_days)
- * - Start Visit (axis_visits)
- * - UI feedback (status + toast)
- *
- * NOTE: Your Supabase tables must exist:
- * - public.axis_days (id uuid PK, user_id uuid, day_date date/text, merchandiser_name text, created_at timestamptz default now())
- * - public.axis_visits (id uuid PK, user_id uuid, day_id uuid, store_name text, started_at timestamptz default now())
- */
+let supabase = null;
 
-// --------------------
-// Tiny DOM helpers
-// --------------------
-const $ = (sel) => document.querySelector(sel);
+const $ = (id) => document.getElementById(id);
 
-function setStatus(msg, type = "info") {
-  const el = $("#status");
+const toast = (msg) => {
+  const el = $("toast");
   if (!el) return;
   el.textContent = msg;
-  el.dataset.type = type;
-}
-
-function toast(msg, type = "info", ms = 2200) {
-  let wrap = $("#toast");
-  if (!wrap) {
-    wrap = document.createElement("div");
-    wrap.id = "toast";
-    wrap.style.position = "fixed";
-    wrap.style.left = "50%";
-    wrap.style.bottom = "22px";
-    wrap.style.transform = "translateX(-50%)";
-    wrap.style.padding = "10px 14px";
-    wrap.style.borderRadius = "10px";
-    wrap.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    wrap.style.fontSize = "14px";
-    wrap.style.zIndex = "9999";
-    wrap.style.border = "1px solid rgba(255,255,255,0.14)";
-    wrap.style.backdropFilter = "blur(10px)";
-    wrap.style.display = "none";
-    document.body.appendChild(wrap);
-  }
-
-  wrap.style.display = "block";
-  wrap.style.opacity = "1";
-  wrap.style.background = type === "error" ? "rgba(140, 30, 30, 0.65)"
-    : type === "success" ? "rgba(20, 110, 55, 0.65)"
-    : "rgba(20, 35, 65, 0.65)";
-  wrap.textContent = msg;
-
-  window.clearTimeout(wrap._t);
-  wrap._t = window.setTimeout(() => {
-    wrap.style.opacity = "0";
-    window.setTimeout(() => (wrap.style.display = "none"), 250);
-  }, ms);
-}
-
-// --------------------
-// App state
-// --------------------
-const state = {
-  user: null,
-  day: null,      // { id, day_date, merchandiser_name }
-  visit: null,    // { id, store_name }
+  el.style.display = "block";
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => (el.style.display = "none"), 2600);
 };
 
-const stores = [
-  "Walmart 1492",
-  "King Soopers 00014",
-  "Family Dollar 3477",
-  "Target SC 1471",
-];
+const state = {
+  user: null,
+  activeDay: null,
+  activeVisit: null,
+};
 
-// --------------------
-// Auth
-// --------------------
+// ----------------------------
+// Supabase init (from /env)
+// ----------------------------
+async function initSupabase() {
+  const r = await fetch("/env", { cache: "no-store" });
+  if (!r.ok) throw new Error(`/env failed (${r.status})`);
+
+  const cfg = await r.json();
+
+  // MUST be returned by your Pages Function (/functions/env.js)
+  // shape:
+  // { supabaseUrl: "...", supabaseAnonKey: "..." }
+  if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
+    throw new Error("Supabase config missing from /env. Need supabaseUrl + supabaseAnonKey.");
+  }
+
+  supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+}
+
+function uiLockAll() {
+  $("btnSignOut").disabled = true;
+  $("btnBeginDay").disabled = true;
+  $("btnLoadActiveDay").disabled = true;
+
+  $("storeSelect").disabled = true;
+  $("btnStartVisit").disabled = true;
+  $("visitNotes").disabled = true;
+  $("btnSaveNotes").disabled = true;
+
+  $("btnGenerateEVS").disabled = true;
+  $("btnGeneratePDR").disabled = true;
+}
+
+function uiSignedIn() {
+  $("btnSignOut").disabled = false;
+  $("btnBeginDay").disabled = false;
+  $("btnLoadActiveDay").disabled = false;
+}
+
+function uiDayActive() {
+  $("storeSelect").disabled = false;
+  $("btnStartVisit").disabled = false;
+}
+
+function uiVisitActive() {
+  $("visitNotes").disabled = false;
+  $("btnSaveNotes").disabled = false;
+}
+
 async function refreshUser() {
   const { data, error } = await supabase.auth.getUser();
-  if (error) {
-    state.user = null;
-    return null;
-  }
-  state.user = data?.user ?? null;
+  if (error) throw error;
+
+  state.user = data.user || null;
+  $("who").textContent = state.user ? state.user.email : "Not signed in";
   return state.user;
 }
 
-function requireUser() {
-  if (!state.user) {
-    toast("Please sign in first.", "error");
-    throw new Error("Not signed in");
-  }
-  return state.user;
-}
+// ----------------------------
+// Auth
+// ----------------------------
+async function signIn() {
+  const email = $("email").value.trim();
+  const password = $("password").value;
 
-async function signIn(email, password) {
-  setStatus("Signing in…");
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    setStatus("Sign-in failed.", "error");
-    toast(error.message || "Sign-in failed.", "error");
-    return;
+  if (!email || !password) return toast("Enter email + password.");
+
+  $("btnSignIn").disabled = true;
+
+  try {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+
+    await refreshUser();
+    uiSignedIn();
+    toast(`Signed in as ${state.user.email}`);
+
+    // Autoload any active day
+    await loadActiveDay();
+  } catch (e) {
+    console.error(e);
+    toast(`Sign-in failed: ${e.message}`);
+  } finally {
+    $("btnSignIn").disabled = false;
   }
-  await refreshUser();
-  setStatus("Signed in.", "success");
-  toast("Signed in ✓", "success");
-  render();
-  return data;
 }
 
 async function signOut() {
-  setStatus("Signing out…");
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    setStatus("Sign-out failed.", "error");
-    toast(error.message || "Sign-out failed.", "error");
-    return;
+  try {
+    await supabase.auth.signOut();
+  } catch (e) {
+    console.error(e);
   }
+
   state.user = null;
-  state.day = null;
-  state.visit = null;
-  setStatus("Signed out.", "info");
-  toast("Signed out.", "info");
-  render();
+  state.activeDay = null;
+  state.activeVisit = null;
+
+  $("activeDayText").textContent = "None";
+  $("activeVisitText").textContent = "None";
+  $("visitNotes").value = "";
+
+  uiLockAll();
+  $("who").textContent = "Not signed in";
+  toast("Signed out.");
 }
 
-// --------------------
-// Data actions (the real “fix” is adding user_id)
-// --------------------
+// ----------------------------
+// Day
+// ----------------------------
 async function beginDay() {
-  const user = requireUser();
+  if (!state.user) return toast("Sign in first.");
 
-  const merchName = ($("#merchName")?.value || "").trim();
-  if (!merchName) {
-    toast("Enter merchandiser name.", "error");
-    $("#merchName")?.focus();
-    return;
+  const merchName = ($("merchName").value || "").trim() || "Merchandiser";
+  const dayDate = $("dayDate").value || new Date().toISOString().slice(0, 10);
+
+  try {
+    // close any other active days for this user (simple guard)
+    await supabase
+      .from("axis_days")
+      .update({ status: "closed" })
+      .eq("user_id", state.user.id)
+      .eq("status", "active");
+
+    const payload = {
+      user_id: state.user.id,
+      user_email: state.user.email,
+      merch_name: merchName,
+      day_date: dayDate,
+      status: "active",
+    };
+
+    const { data, error } = await supabase
+      .from("axis_days")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    state.activeDay = data;
+    $("activeDayText").textContent = `${data.day_date} (${data.id.slice(0, 8)}…)`;
+    toast("Day started.");
+    uiDayActive();
+
+    // clear any stale visit
+    state.activeVisit = null;
+    $("activeVisitText").textContent = "None";
+    $("visitNotes").value = "";
+    $("visitNotes").disabled = true;
+    $("btnSaveNotes").disabled = true;
+  } catch (e) {
+    console.error(e);
+    toast(`Begin Day failed: ${e.message}`);
   }
-
-  const dayDate = $("#dayDate")?.value || new Date().toISOString().slice(0, 10);
-
-  setStatus("Creating day record…");
-
-  const row = {
-    user_id: user.id,
-    day_date: dayDate,
-    merchandiser_name: merchName,
-  };
-
-  const { data, error } = await supabase
-    .from("axis_days")
-    .insert([row])
-    .select("id, day_date, merchandiser_name")
-    .single();
-
-  if (error) {
-    setStatus("Begin Day failed.", "error");
-    toast(`Begin Day failed: ${error.message}`, "error", 3500);
-    return;
-  }
-
-  state.day = data;
-  state.visit = null;
-
-  setStatus(`Day started (${data.day_date}).`, "success");
-  toast("Begin Day ✓", "success");
-  render();
 }
 
+async function loadActiveDay() {
+  if (!state.user) return;
+
+  try {
+    const { data, error } = await supabase
+      .from("axis_days")
+      .select("*")
+      .eq("user_id", state.user.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      state.activeDay = null;
+      $("activeDayText").textContent = "None";
+      return toast("No active day found.");
+    }
+
+    state.activeDay = data[0];
+    $("activeDayText").textContent = `${state.activeDay.day_date} (${state.activeDay.id.slice(0, 8)}…)`;
+    uiDayActive();
+    toast("Active day loaded.");
+  } catch (e) {
+    console.error(e);
+    toast(`Load Active Day failed: ${e.message}`);
+  }
+}
+
+// ----------------------------
+// Visit + Notes
+// ----------------------------
 async function startVisit() {
-  const user = requireUser();
+  if (!state.user) return toast("Sign in first.");
+  if (!state.activeDay) return toast("Start or load a Day first.");
 
-  if (!state.day?.id) {
-    toast("Begin Day first.", "error");
-    return;
+  const storeName = $("storeSelect").value;
+  if (!storeName) return toast("Pick a store.");
+
+  try {
+    const payload = {
+      user_id: state.user.id,
+      day_id: state.activeDay.id,
+      store_name: storeName,
+      notes: "",
+    };
+
+    const { data, error } = await supabase
+      .from("axis_visits")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    state.activeVisit = data;
+    $("activeVisitText").textContent = `${data.store_name} (${data.id.slice(0, 8)}…)`;
+    $("visitNotes").value = "";
+    uiVisitActive();
+    toast("Visit started.");
+  } catch (e) {
+    console.error(e);
+    toast(`Start Visit failed: ${e.message}`);
   }
+}
 
-  const storeName = $("#storeSelect")?.value || "";
-  if (!storeName) {
-    toast("Select a store.", "error");
-    return;
+async function saveNotes() {
+  if (!state.activeVisit) return toast("Start a visit first.");
+
+  const notes = $("visitNotes").value;
+
+  try {
+    const { error } = await supabase
+      .from("axis_visits")
+      .update({ notes })
+      .eq("id", state.activeVisit.id);
+
+    if (error) throw error;
+    toast("Notes saved.");
+  } catch (e) {
+    console.error(e);
+    toast(`Save notes failed: ${e.message}`);
   }
-
-  setStatus("Starting visit…");
-
-  const row = {
-    user_id: user.id,
-    day_id: state.day.id,
-    store_name: storeName,
-    started_at: new Date().toISOString(),
-  };
-
-  const { data, error } = await supabase
-    .from("axis_visits")
-    .insert([row])
-    .select("id, store_name")
-    .single();
-
-  if (error) {
-    setStatus("Start Visit failed.", "error");
-    toast(`Start Visit failed: ${error.message}`, "error", 3500);
-    return;
-  }
-
-  state.visit = data;
-
-  setStatus(`Visit started (${data.store_name}).`, "success");
-  toast("Start Visit ✓", "success");
-  render();
 }
 
-// Placeholder buttons so the UI isn’t dead.
-function generateEVS() {
-  if (!state.visit?.id) return toast("Start a visit first.", "error");
-  toast("EVS generation: stub (next step).", "info", 2500);
-}
-function generatePDR() {
-  if (!state.visit?.id) return toast("Start a visit first.", "error");
-  toast("PDR generation: stub (next step).", "info", 2500);
-}
-
-// --------------------
-// Render
-// --------------------
-function render() {
-  // Auth status
-  const who = $("#who");
-  if (who) who.textContent = state.user ? state.user.email : "Not signed in";
-
-  // Buttons availability
-  const signedIn = !!state.user;
-  const hasDay = !!state.day?.id;
-  const hasVisit = !!state.visit?.id;
-
-  if ($("#btnSignOut")) $("#btnSignOut").disabled = !signedIn;
-  if ($("#btnSignIn")) $("#btnSignIn").disabled = signedIn;
-
-  if ($("#btnBeginDay")) $("#btnBeginDay").disabled = !signedIn;
-  if ($("#btnStartVisit")) $("#btnStartVisit").disabled = !signedIn || !hasDay;
-
-  if ($("#btnEVS")) $("#btnEVS").disabled = !signedIn || !hasVisit;
-  if ($("#btnPDR")) $("#btnPDR").disabled = !signedIn || !hasVisit;
-
-  // Day + visit text
-  const dayEl = $("#dayInfo");
-  if (dayEl) dayEl.textContent = hasDay ? `${state.day.day_date} • ${state.day.merchandiser_name}` : "No day active";
-
-  const visitEl = $("#visitInfo");
-  if (visitEl) visitEl.textContent = hasVisit ? state.visit.store_name : "No visit active";
-}
-
-// --------------------
+// ----------------------------
 // Boot
-// --------------------
-function ensureStoreOptions() {
-  const sel = $("#storeSelect");
-  if (!sel) return;
-  if (sel.options.length > 0) return;
+// ----------------------------
+async function boot() {
+  uiLockAll();
 
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Select store…";
-  sel.appendChild(placeholder);
+  // sensible defaults
+  if ($("dayDate")) $("dayDate").value = new Date().toISOString().slice(0, 10);
+  if ($("merchName") && !$("merchName").value) $("merchName").value = "Gabriel Kearns";
 
-  for (const s of stores) {
-    const opt = document.createElement("option");
-    opt.value = s;
-    opt.textContent = s;
-    sel.appendChild(opt);
+  // wire buttons
+  $("btnSignIn").addEventListener("click", signIn);
+  $("btnSignOut").addEventListener("click", signOut);
+  $("btnBeginDay").addEventListener("click", beginDay);
+  $("btnLoadActiveDay").addEventListener("click", loadActiveDay);
+  $("btnStartVisit").addEventListener("click", startVisit);
+  $("btnSaveNotes").addEventListener("click", saveNotes);
+
+  await initSupabase();
+
+  // restore session if present
+  await refreshUser();
+  if (state.user) {
+    uiSignedIn();
+    toast(`Signed in as ${state.user.email}`);
+    await loadActiveDay();
+  } else {
+    toast("Ready. Sign in to begin.");
   }
 }
 
-function wireUI() {
-  ensureStoreOptions();
-
-  $("#btnSignIn")?.addEventListener("click", async () => {
-    const email = ($("#email")?.value || "").trim();
-    const password = ($("#password")?.value || "").trim();
-    if (!email || !password) return toast("Enter email + password.", "error");
-    await signIn(email, password);
-  });
-
-  $("#btnSignOut")?.addEventListener("click", signOut);
-  $("#btnBeginDay")?.addEventListener("click", beginDay);
-  $("#btnStartVisit")?.addEventListener("click", startVisit);
-
-  $("#btnEVS")?.addEventListener("click", generateEVS);
-  $("#btnPDR")?.addEventListener("click", generatePDR);
-}
-
-async function main() {
-  wireUI();
-
-  // If a session exists, load user on refresh
-  await refreshUser();
-
-  // Keep UI synced to auth changes
-  supabase.auth.onAuthStateChange(async () => {
-    await refreshUser();
-    render();
-  });
-
-  // Default date input (nice UX)
-  const dayDate = $("#dayDate");
-  if (dayDate && !dayDate.value) dayDate.value = new Date().toISOString().slice(0, 10);
-
-  render();
-  setStatus("Ready.", "info");
-}
-
-main().catch((e) => {
+boot().catch((e) => {
   console.error(e);
-  setStatus("App boot error.", "error");
-  toast(`Boot error: ${e.message}`, "error", 4000);
+  toast(`Init failed: ${e.message}`);
 });

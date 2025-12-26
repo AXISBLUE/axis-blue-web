@@ -1,198 +1,234 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>AXIS BLUE — Web Online</title>
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AXIS BLUE — Web Online</title>
 
   <style>
-    :root {
-      --bg: #0b1f33;
-      --panel: #102a44;
-      --border: #1e3a5a;
-      --text: #e8f1fb;
-      --muted: #9bb3c9;
-      --accent: #3da9fc;
-      --danger: #ff6b6b;
-      --success: #3ddc97;
+    :root{
+      --bg:#071827;
+      --card:#0b2336;
+      --card2:#0c2a40;
+      --text:#e9f2ff;
+      --muted:#9bb1c9;
+      --accent:#3aa0ff;
+      --bad:#ff5a5a;
+      --good:#35d07f;
+      --border:rgba(255,255,255,.10);
+      --shadow:0 12px 40px rgba(0,0,0,.45);
+      --radius:18px;
     }
-
-    * {
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+      background: radial-gradient(1200px 800px at 20% 0%, #0b2f4d 0%, var(--bg) 55%, #04111c 100%);
+      color:var(--text);
     }
-
-    body {
-      margin: 0;
-      background: linear-gradient(180deg, #081726, #0b1f33);
-      color: var(--text);
-      padding: 24px;
+    .wrap{ max-width:860px; margin:0 auto; padding:22px 16px 60px; }
+    .hero{
+      display:flex; justify-content:space-between; align-items:flex-start; gap:18px;
+      margin:10px 0 18px;
     }
-
-    .container {
-      max-width: 420px;
-      margin: 0 auto;
+    .title h1{ margin:0; font-size:44px; letter-spacing:.2px; }
+    .title p{ margin:6px 0 0; color:var(--muted); font-size:18px; line-height:1.2; }
+    .pillbox{ display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
+    .pill{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      border-radius:999px;
+      padding:10px 14px;
+      color:var(--muted);
+      font-size:14px;
+      width:max-content;
     }
-
-    h1 {
-      margin: 0 0 8px;
-      font-size: 26px;
-      letter-spacing: 0.5px;
+    .card{
+      background:linear-gradient(180deg,var(--card) 0%, var(--card2) 100%);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:16px;
+      margin:14px 0;
     }
-
-    .subtitle {
-      color: var(--muted);
-      font-size: 14px;
-      margin-bottom: 24px;
+    .card h2{ margin:0 0 10px; font-size:22px; }
+    .hint{ margin:0 0 14px; color:var(--muted); line-height:1.35; }
+    label{ display:block; font-size:13px; color:var(--muted); margin:12px 0 6px; }
+    input, select, textarea{
+      width:100%;
+      box-sizing:border-box;
+      padding:14px 14px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+      font-size:16px;
     }
-
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      margin-bottom: 20px;
+    textarea{ min-height:90px; resize:vertical; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .row > *{ flex:1; min-width:200px; }
+    .btnrow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    button{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:14px;
+      font-size:16px;
+      cursor:pointer;
     }
-
-    label {
-      display: block;
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 6px;
+    button.primary{
+      background:var(--accent);
+      border-color:transparent;
+      color:#062033;
+      font-weight:700;
     }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: #071524;
-      color: var(--text);
-      font-size: 15px;
+    button:disabled{ opacity:.45; cursor:not-allowed; }
+    .status{
+      margin-top:10px;
+      font-size:14px;
+      color:var(--muted);
     }
-
-    input::placeholder {
-      color: #6f8aa5;
+    .status .good{ color:var(--good); font-weight:700; }
+    .status .bad{ color:var(--bad); font-weight:700; }
+    .toast{
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:18px;
+      background:rgba(0,0,0,.72);
+      border:1px solid var(--border);
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:14px;
+      box-shadow:var(--shadow);
+      max-width:92vw;
+      width:520px;
+      display:none;
+      z-index:9999;
     }
-
-    button {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      background: var(--accent);
-      color: #00101f;
-      font-weight: 600;
-      font-size: 15px;
-      cursor: pointer;
+    .footer{
+      margin-top:22px;
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.3;
     }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    .footer .legal{
+      opacity:.95;
     }
-
-    .status {
-      margin-top: 12px;
-      font-size: 14px;
-      min-height: 18px;
-    }
-
-    .status.error {
-      color: var(--danger);
-    }
-
-    .status.success {
-      color: var(--success);
-    }
-
-    .footer {
-      text-align: center;
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 28px;
-      line-height: 1.5;
-    }
-
-    .badge {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #0a2540;
-      border: 1px solid var(--border);
-      font-size: 11px;
-      color: var(--muted);
+    .footer .meta{
+      margin-top:10px;
+      font-size:12px;
+      opacity:.75;
     }
   </style>
+
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
-  <div class="container">
-    <h1>AXIS BLUE — Web Online</h1>
-    <div class="subtitle">
-      Private test environment<br />
-      <strong>aptest.axisblue.io</strong>
+  <div class="wrap">
+    <div class="hero">
+      <div class="title">
+        <h1>AXIS BLUE — Web Online</h1>
+        <p>Private test environment<br><strong>aptest.axisblue.io</strong></p>
+      </div>
+      <div class="pillbox">
+        <div class="pill" id="pillEnv">Environment: Test</div>
+        <div class="pill" id="pillData">Data: Supabase</div>
+        <div class="pill" id="pillBuild">Build: Static + Functions</div>
+      </div>
     </div>
 
-    <div class="panel">
+    <div class="card" id="cardAuth">
+      <h2>Authentication</h2>
+      <p class="hint">Sign in to unlock day + visit workflow. If auth fails, you’ll see a clear error message below.</p>
+
       <label>Email</label>
-      <input id="email" type="email" placeholder="you@axisblue.io" />
+      <input id="email" autocomplete="email" placeholder="you@domain.com" />
 
       <label>Password</label>
-      <input id="password" type="password" placeholder="••••••••••" />
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••••" />
 
-      <button id="loginBtn" onclick="signIn()">Sign In</button>
+      <div class="btnrow">
+        <button class="primary" id="btnSignIn">Sign In</button>
+        <button id="btnSignOut" disabled>Sign Out</button>
+      </div>
 
-      <div id="status" class="status"></div>
+      <div class="status" id="authStatus">Signed in as: <span id="who">Loading…</span></div>
+    </div>
+
+    <div class="card" id="cardDay">
+      <h2>Start Day</h2>
+      <p class="hint">Creates a Day record and becomes the parent container for visits. This is the base of your “history”.</p>
+
+      <label>Merchandiser name</label>
+      <input id="merchName" placeholder="Gabriel Kearns" />
+
+      <label>Date</label>
+      <input id="dayDate" type="date" />
+
+      <div class="btnrow">
+        <button class="primary" id="btnBeginDay" disabled>Begin Day</button>
+        <button id="btnLoadActiveDay" disabled>Load Active Day</button>
+      </div>
+
+      <div class="status" id="dayStatus">
+        Active Day: <span id="activeDayText">None</span>
+      </div>
+    </div>
+
+    <div class="card" id="cardVisit">
+      <h2>Store Visit</h2>
+      <p class="hint">Starts a Visit under the active Day. Notes save to Supabase immediately.</p>
+
+      <label>Store</label>
+      <select id="storeSelect" disabled>
+        <option value="">Select store…</option>
+        <option>Walmart 1492</option>
+        <option>King Soopers 00014</option>
+        <option>Family Dollar 3477</option>
+        <option>Target SC 1471</option>
+      </select>
+
+      <div class="btnrow">
+        <button class="primary" id="btnStartVisit" disabled>Start Visit</button>
+      </div>
+
+      <label>Visit notes</label>
+      <textarea id="visitNotes" disabled placeholder="OOS items, sales opportunities, coolers, credits, anything…"></textarea>
+
+      <div class="btnrow">
+        <button id="btnSaveNotes" disabled>Save Notes</button>
+      </div>
+
+      <div class="status" id="visitStatus">Active Visit: <span id="activeVisitText">None</span></div>
+    </div>
+
+    <div class="card" id="cardDocs">
+      <h2>Documents</h2>
+      <p class="hint">PDF generation is next. For tomorrow, we’ll at least store Day + Visit + Notes reliably.</p>
+      <div class="btnrow">
+        <button id="btnGenerateEVS" disabled>Generate EVS</button>
+        <button id="btnGeneratePDR" disabled>Generate PDR</button>
+      </div>
+      <div class="status" id="docsStatus">Status: Waiting for workflow wiring.</div>
     </div>
 
     <div class="footer">
-      AXIS BLUE is a private operational system.<br />
-      Unauthorized access, sharing, or distribution is prohibited.
-      <div class="badge">Soft launch · Internal use only</div>
+      <div class="legal">
+        <strong>AXIS BLUE</strong> is a private operational system. Unauthorized access, sharing, or distribution is prohibited.
+      </div>
+      <div class="meta">
+        Test environment: <strong>aptest.axisblue.io</strong> • Soft launch phase • Internal use only
+      </div>
     </div>
   </div>
 
-  <script>
-    async function signIn() {
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      const status = document.getElementById("status");
-      const button = document.getElementById("loginBtn");
+  <div class="toast" id="toast"></div>
 
-      status.textContent = "Signing in…";
-      status.className = "status";
-      button.disabled = true;
-
-      try {
-        const res = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          status.textContent = data.error || "Login failed";
-          status.classList.add("error");
-          button.disabled = false;
-          return;
-        }
-
-        localStorage.setItem("axis_token", data.access_token);
-        status.textContent = "Signed in as " + data.user.email;
-        status.classList.add("success");
-
-      } catch (err) {
-        status.textContent = "Network error";
-        status.classList.add("error");
-      }
-
-      button.disabled = false;
-    }
-  </script>
+  <script src="/app.js"></script>
 </body>
 </html>
