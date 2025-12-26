@@ -1,81 +1,51 @@
-(function () {
-  const KEY = "AXIS_SUPABASE_CONFIG";
+/* AXIS BLUE: Supabase client bootstrap (non-bundled Pages build)
+   - Stores URL/anonKey locally (localStorage) via Config modal
+   - Exposes window.supabase when ready
+*/
+(function(){
+  const LS_KEY = "AXISBLUE_SUPABASE_CFG";
 
-  function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = src;
-      s.async = true;
-      s.onload = resolve;
-      s.onerror = reject;
-      document.head.appendChild(s);
-    });
+  function readCfg(){
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || "null"); }
+    catch(e){ return null; }
+  }
+  function writeCfg(cfg){
+    localStorage.setItem(LS_KEY, JSON.stringify(cfg));
   }
 
-  function getLocalConfig() {
-    try {
-      return JSON.parse(localStorage.getItem(KEY) || "null");
-    } catch {
-      return null;
+  function hasLib(){
+    return !!(window.supabase && window.supabase.auth); // already created
+  }
+
+  function createClient(cfg){
+    if(!window.supabasejs || !window.supabasejs.createClient){
+      return { ok:false, reason:"supabasejs library missing" };
+    }
+    if(!cfg || !cfg.url || !cfg.anon){
+      return { ok:false, reason:"config missing" };
+    }
+    try{
+      window.supabase = window.supabasejs.createClient(cfg.url, cfg.anon, {
+        auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true }
+      });
+      window.__axis_cfg = cfg;
+      return { ok:true };
+    }catch(e){
+      window.supabase = null;
+      return { ok:false, reason:String(e) };
     }
   }
 
-  function setLocalConfig(cfg) {
-    localStorage.setItem(KEY, JSON.stringify(cfg));
-  }
-
-  async function fetchEnvConfig() {
-    try {
-      const r = await fetch("/api/env", { cache: "no-store" });
-      const j = await r.json();
-      if (j && j.ok && j.SUPABASE_URL && j.SUPABASE_ANON_KEY === "SET") {
-        // We can't see the raw anon key from /api/env (by design),
-        // so env config isn't enough alone. Local config is primary.
-        return { ok: true, envOnly: true, url: j.SUPABASE_URL };
-      }
-      return { ok: false };
-    } catch {
-      return { ok: false };
-    }
-  }
-
-  async function initSupabase() {
-    window.supabase = null;
-    window.__axisSupabase = {
-      status: "INIT",
-      local: getLocalConfig(),
-      env: null
-    };
-
-    // Load Supabase JS CDN
-    await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2");
-    window.supabasejs = window.supabasejs || window.supabase; // some builds expose differently
-
-    const local = getLocalConfig();
-    if (local && local.url && local.anonKey) {
-      try {
-        window.supabase = window.supabasejs.createClient(local.url, local.anonKey, {
-          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-        });
-        window.__axisSupabase.status = "READY_LOCAL";
-        return { ok: true, mode: "local" };
-      } catch (e) {
-        window.__axisSupabase.status = "ERR_LOCAL";
-        window.__axisSupabase.error = String(e);
-        return { ok: false, error: String(e) };
-      }
-    }
-
-    const env = await fetchEnvConfig();
-    window.__axisSupabase.env = env;
-    window.__axisSupabase.status = "NEEDS_CONFIG";
-    return { ok: false, needsConfig: true };
-  }
-
-  window.AxisConfig = {
-    KEY,
-    get: getLocalConfig,
-    set: setLocalConfig,
-    initSupabase
+  // Public helpers for app.js
+  window.AxisCfg = {
+    LS_KEY,
+    readCfg,
+    writeCfg,
+    hasLib,
+    createClient
   };
+
+  // Attempt auto-init from saved cfg on load
+  const cfg = readCfg();
+  if(cfg){ createClient(cfg); }
 })();

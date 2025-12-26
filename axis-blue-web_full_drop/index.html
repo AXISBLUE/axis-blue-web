@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>AXIS BLUE • Field Console</title>
+  <link rel="stylesheet" href="styles.css"/>
+  <meta name="theme-color" content="#061528"/>
+</head>
+<body>
+<div class="bg"></div>
+
+<header class="topbar glass">
+  <div class="brand">
+    <img src="assets/axis_logo.png" class="logo" alt="AXIS BLUE logo"/>
+    <div>
+      <div class="brandTitle">AXIS BLUE</div>
+      <div class="brandSub">Field Console • aptest.axisblue.io</div>
+    </div>
+  </div>
+
+  <div class="chips">
+    <span class="chip">ENV <b id="envState" class="pill pill-dim">…</b></span>
+    <span class="chip">HEALTH <b id="healthState" class="pill pill-dim">…</b></span>
+    <span class="chip">AUTH <b id="authState" class="pill pill-warn">CFG</b></span>
+    <span class="chip">GPS <b id="gpsState" class="pill pill-dim">—</b></span>
+    <span class="chip">BUILD <b id="buildId" class="pill pill-dim">__BUILD_ID__</b></span>
+    <button class="btn btn-ghost" id="btnConfig">Config</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="glass card">
+    <div class="cardHead">
+      <div>
+        <div class="h1">Secure Login</div>
+        <div class="muted">Sign in to access Run Day + Intelligence Capture.</div>
+      </div>
+      <div class="row">
+        <button id="btnSignOut" class="btn btn-ghost">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@axisblue.io" autocomplete="username"/>
+      </div>
+      <div>
+        <label>Password</label>
+        <input id="password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="btnSignIn" class="btn btn-primary">Sign In</button>
+      <button id="btnReset" class="btn">Reset Password</button>
+      <span id="loginMsg" class="muted"></span>
+    </div>
+  </section>
+
+  <section id="app" class="glass card hidden">
+    <div class="cardHead">
+      <div>
+        <div class="h1">Run Day</div>
+        <div class="muted">Day → Visit → EOV → Next Visit → End Day</div>
+      </div>
+      <div class="row">
+        <button id="btnStartDay" class="btn btn-primary">Start Day</button>
+        <button id="btnMorningReport" class="btn">Morning Report</button>
+        <button id="btnEndDay" class="btn btn-danger">End Day</button>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <div class="panelTitle">Stores (foreknown + new)</div>
+        <select id="storeSelect"></select>
+        <div class="grid2 tight">
+          <input id="newStoreName" placeholder="New store name"/>
+          <input id="newStoreAddress" placeholder="New store address"/>
+        </div>
+        <div class="row">
+          <button id="btnAddStore" class="btn">Add Store</button>
+          <button id="btnUseStore" class="btn">Use Selected</button>
+        </div>
+        <div class="muted tiny">Tip: add lat/lon later. GPS capture will still log check-in/out.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panelTitle">Visit Controls</div>
+        <div class="row">
+          <button id="btnStartVisit" class="btn btn-primary">Start Visit</button>
+          <button id="btnEndVisit" class="btn">End Visit</button>
+          <button id="btnEOV" class="btn">Generate EOV</button>
+        </div>
+        <div class="muted tiny" id="visitClock">No active visit</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <div class="panelTitle">Capture (Photos by Category)</div>
+        <div class="grid2 tight">
+          <button class="btn" data-cat="Coolers">Coolers</button>
+          <button class="btn" data-cat="SalesFloor">Sales Floor</button>
+          <button class="btn" data-cat="Backroom">Backroom</button>
+          <button class="btn" data-cat="Credits">Credits</button>
+        </div>
+        <div class="row">
+          <input id="photoNote" placeholder="Optional note (2 lines max in future PDFs)"/>
+          <button id="btnAddPhotoStub" class="btn">Add Photo Stub</button>
+        </div>
+        <div class="muted tiny">Web can’t save camera files reliably into Supabase without your bucket wiring; this builds the structure now.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panelTitle">Scan (QR + Barcode)</div>
+        <div class="row">
+          <select id="scanType">
+            <option value="OOS">OOS</option>
+            <option value="CREDIT">Credit/Return</option>
+            <option value="BREAKAGE">Breakage</option>
+            <option value="INTEL">Shelf Intelligence</option>
+          </select>
+          <input id="scanValue" placeholder="Scan value / UPC / QR payload"/>
+          <button id="btnAddScan" class="btn btn-primary">Add</button>
+        </div>
+        <div class="muted tiny">iOS NFC: use Shortcuts to read NFC → open aptest.axisblue.io/?nfc=PAYLOAD</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panelTitle">Output</div>
+      <div class="row">
+        <button id="btnCopy" class="btn">Copy Output</button>
+        <button id="btnClear" class="btn btn-ghost">Clear</button>
+      </div>
+      <pre id="output"></pre>
+    </div>
+  </section>
+</main>
+
+<!-- Config Modal -->
+<div class="modal hidden" id="configModal">
+  <div class="glass modalBox">
+    <div class="modalHead">
+      <div class="h1">CONFIG (STORED LOCALLY)</div>
+      <button class="btn btn-ghost" id="btnCloseConfig">Close</button>
+    </div>
+
+    <div class="grid2">
+      <div>
+        <label>Supabase URL</label>
+        <input id="cfgUrl" placeholder="https://xxxxx.supabase.co"/>
+      </div>
+      <div>
+        <label>Supabase Anon Key</label>
+        <input id="cfgKey" placeholder="eyJhbGciOi..."/>
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="btnSaveConfig" class="btn btn-primary">Save Config</button>
+      <button id="btnTestConfig" class="btn">Test Config</button>
+      <span id="cfgMsg" class="muted"></span>
+    </div>
+    <div class="tiny muted">This does not change Cloudflare. It only configures the client in your browser.</div>
+  </div>
+</div>
+
+<script src="supabaseClient.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

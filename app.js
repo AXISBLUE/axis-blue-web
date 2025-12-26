@@ -1,301 +1,256 @@
-(function () {
-  const \$ = (id) => document.getElementById(id);
-  const log = (el, msg) => { el.textContent = msg; };
+(function(){
+  const $ = (id)=>document.getElementById(id);
 
-  const envBadge = $("envBadge");
-  const healthBadge = $("healthBadge");
-  const authBadge = $("authBadge");
-  const statusText = $("statusText");
-  const footStatus = $("footStatus");
+  // UI refs
+  const chipEnv=$("chipEnv"), chipHealth=$("chipHealth"), chipAuth=$("chipAuth"), chipSync=$("chipSync");
+  const footerSupabase=$("footerSupabase");
+  const authStatus=$("authStatus");
+  const btnConfig=$("btnConfig"), btnDiagnostics=$("btnDiagnostics"), btnDiagInline=$("btnDiagInline");
+  const btnSignIn=$("btnSignIn"), btnSignOut=$("btnSignOut"), btnTestConfig=$("btnTestConfig");
+  const email=$("email"), password=$("password");
+  const dashboard=$("dashboardCard");
 
-  const appCard = $("appCard");
-
-  // Modal
-  const modalBack = $("modalBack");
-  const cfgUrl = $("cfgUrl");
-  const cfgKey = $("cfgKey");
-  const cfgPhotos = $("cfgPhotos");
-  const cfgEvents = $("cfgEvents");
-  const cfgLog = $("cfgLog");
-
-  function badge(el, type, text){
-    el.className = "badge " + type;
-    el.textContent = text;
+  // ---- Diagnostics helpers
+  function setAuthChip(txt, state){
+    chipAuth.textContent = "AUTH: " + txt;
+    if(state==="ok"){ chipAuth.style.borderColor="rgba(90,200,130,.55)"; }
+    else if(state==="err"){ chipAuth.style.borderColor="rgba(220,90,90,.55)"; }
+    else { chipAuth.style.borderColor="rgba(210,170,80,.55)"; }
   }
+  function setStatus(msg){ authStatus.textContent = msg; }
 
-  function openModal(){
-    const c = window.AxisConfig.get() || {};
-    cfgUrl.value = c.url || "";
-    cfgKey.value = c.anonKey || "";
-    cfgPhotos.value = c.photosBucket || "work-photos";
-    cfgEvents.value = c.eventsBucket || "events";
-    modalBack.style.display = "flex";
-    appendCfgLog("Opened config.");
-  }
-  function closeModal(){ modalBack.style.display = "none"; }
-
-  function appendCfgLog(m){
-    const ts = new Date().toLocaleTimeString();
-    const cur = cfgLog.textContent === "—" ? "" : (cfgLog.textContent + "\n");
-    cfgLog.textContent = cur + `[${ts}] ${m}`;
-  }
-
-  async function pingEnv(){
+  async function ping(path){
     try{
-      const r = await fetch("/api/env", { cache: "no-store" });
-      const j = await r.json();
-      if(j && j.ok){
-        badge(envBadge, "good", "OK");
-        return true;
-      }
-      badge(envBadge, "bad", "ERR");
-      return false;
-    }catch(e){
-      badge(envBadge, "bad", "ERR");
-      return false;
-    }
+      const r=await fetch(path,{cache:"no-store"});
+      if(!r.ok) return {ok:false, code:r.status};
+      return {ok:true, json: await r.json()};
+    }catch(e){ return {ok:false, err:String(e)}; }
   }
 
-  async function pingHealth(){
+  async function refreshChips(){
+    const env = await ping("/api/env");
+    chipEnv.textContent = env.ok ? "ENV: OK" : "ENV: ERR";
+    const health = await ping("/api/health");
+    chipHealth.textContent = health.ok ? "HEALTH: OK" : "HEALTH: ERR";
+    chipSync.textContent = "SYNC: OK";
+  }
+
+  // ---- Config modal (inline, no extra files)
+  function openConfig(){
+    const cfg = (window.AxisCfg && window.AxisCfg.readCfg()) || {};
+    const overlay=document.createElement("div");
+    overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:9999";
+    const box=document.createElement("div");
+    box.className="card";
+    box.style.maxWidth="520px";
+    box.style.width="100%";
+    box.innerHTML = `
+      <div class="cardTitle" style="font-size:18px;letter-spacing:.08em;font-family:var(--mono);">CONFIG (STORED LOCALLY)</div>
+      <div class="cardSubtitle" style="font-family:var(--mono);font-size:12px;">
+        Paste your Supabase Project URL and Anon Key. Stored only in your browser (localStorage).
+      </div>
+
+      <label class="field">
+        <div class="label">Supabase URL</div>
+        <input id="cfg_url" placeholder="https://xxxx.supabase.co" value="${(cfg.url||"").replace(/"/g,'&quot;')}"/>
+      </label>
+
+      <label class="field" style="margin-top:8px">
+        <div class="label">Supabase Anon Key</div>
+        <input id="cfg_anon" placeholder="eyJ..." value="${(cfg.anon||"").replace(/"/g,'&quot;')}"/>
+      </label>
+
+      <label class="field" style="margin-top:8px">
+        <div class="label">Storage bucket for photos</div>
+        <input id="cfg_bucket_photos" placeholder="work-photos" value="${(cfg.bucketPhotos||"work-photos").replace(/"/g,'&quot;')}"/>
+      </label>
+
+      <label class="field" style="margin-top:8px">
+        <div class="label">Storage bucket for event logs</div>
+        <input id="cfg_bucket_events" placeholder="events" value="${(cfg.bucketEvents||"events").replace(/"/g,'&quot;')}"/>
+      </label>
+
+      <div class="row gap" style="margin-top:12px">
+        <button class="btn primary" id="cfg_save">Save</button>
+        <button class="btn" id="cfg_close">Close</button>
+        <button class="btn ghost right" id="cfg_clear">Clear</button>
+      </div>
+
+      <div class="pill" id="cfg_msg" style="margin-top:12px">Waiting…</div>
+    `;
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const msg = box.querySelector("#cfg_msg");
+    const close = ()=>overlay.remove();
+
+    box.querySelector("#cfg_close").onclick=close;
+    box.querySelector("#cfg_clear").onclick=()=>{
+      localStorage.removeItem(window.AxisCfg.LS_KEY);
+      msg.textContent="Cleared local config.";
+      setAuthChip("CFG", "cfg");
+      footerSupabase.textContent="supabase: pending";
+    };
+    box.querySelector("#cfg_save").onclick=()=>{
+      const newCfg={
+        url: box.querySelector("#cfg_url").value.trim(),
+        anon: box.querySelector("#cfg_anon").value.trim(),
+        bucketPhotos: box.querySelector("#cfg_bucket_photos").value.trim() || "work-photos",
+        bucketEvents: box.querySelector("#cfg_bucket_events").value.trim() || "events",
+      };
+      window.AxisCfg.writeCfg(newCfg);
+      const created = window.AxisCfg.createClient(newCfg);
+      if(created.ok){
+        msg.textContent="Saved config locally.";
+        footerSupabase.textContent="supabase: ready";
+        setAuthChip("CFG", "cfg");
+      } else {
+        msg.textContent="Config saved, but client init failed: " + created.reason;
+        footerSupabase.textContent="supabase: error";
+        setAuthChip("ERR", "err");
+      }
+    };
+  }
+
+  // ---- Auth logic
+  async function ensureSupabaseReady(){
+    if(window.supabase && window.supabase.auth){
+      footerSupabase.textContent="supabase: ready";
+      return {ok:true};
+    }
+    // If cfg exists but lib missing, call it out loudly
+    const cfg = window.AxisCfg && window.AxisCfg.readCfg();
+    if(cfg && (!window.supabasejs || !window.supabasejs.createClient)){
+      footerSupabase.textContent="supabase: lib missing";
+      return {ok:false, reason:"supabase-js lib missing"};
+    }
+    footerSupabase.textContent = cfg ? "supabase: initializing…" : "supabase: pending";
+    return {ok:false, reason: cfg ? "initializing" : "no config"};
+  }
+
+  async function signIn(){
+    setStatus("Signing in…");
+    const ready = await ensureSupabaseReady();
+    if(!ready.ok){
+      setAuthChip("CFG", "cfg");
+      setStatus(ready.reason === "no config" ? "Config required" : ready.reason);
+      return;
+    }
     try{
-      const r = await fetch("/api/health", { cache: "no-store" });
-      const j = await r.json();
-      if(j && j.ok){
-        badge(healthBadge, "good", "OK");
-        return true;
-      }
-      badge(healthBadge, "bad", "ERR");
-      return false;
-    }catch(e){
-      badge(healthBadge, "bad", "ERR");
-      return false;
-    }
-  }
-
-  function unlockApp(){
-    appCard.style.opacity = "1";
-    appCard.style.pointerEvents = "auto";
-  }
-  function lockApp(){
-    appCard.style.opacity = ".55";
-    appCard.style.pointerEvents = "none";
-  }
-
-  function setTabs(){
-    const tabs = document.querySelectorAll(".tab");
-    tabs.forEach(t=>{
-      t.addEventListener("click", ()=>{
-        tabs.forEach(x=>x.classList.remove("active"));
-        t.classList.add("active");
-        const name = t.getAttribute("data-tab");
-        ["day","visit","capture","intel","mgmt","history"].forEach(n=>{
-          const el = document.getElementById("tab_"+n);
-          el.style.display = (n===name) ? "block" : "none";
-        });
+      const { data, error } = await window.supabase.auth.signInWithPassword({
+        email: email.value.trim(),
+        password: password.value
       });
+      if(error){
+        setAuthChip("ERR","err");
+        setStatus("Login failed: " + error.message);
+        dashboard.classList.add("dim");
+        btnSignOut.disabled = true;
+        return;
+      }
+      setAuthChip(email.value.trim(), "ok");
+      setStatus("Signed in.");
+      dashboard.classList.remove("dim");
+      btnSignOut.disabled = false;
+    }catch(e){
+      setAuthChip("ERR","err");
+      setStatus("Login exception: " + String(e));
+    }
+  }
+
+  async function signOut(){
+    try{
+      if(window.supabase && window.supabase.auth){
+        await window.supabase.auth.signOut();
+      }
+    }catch(e){}
+    setAuthChip("CFG","cfg");
+    setStatus("Signed out.");
+    dashboard.classList.add("dim");
+    btnSignOut.disabled = true;
+  }
+
+  async function testConfig(){
+    setStatus("Testing…");
+    const env = await ping("/api/env");
+    const health = await ping("/api/health");
+    const cfg = window.AxisCfg && window.AxisCfg.readCfg();
+    const libOk = !!(window.supabasejs && window.supabasejs.createClient);
+    const clientOk = !!(window.supabase && window.supabase.auth);
+
+    let parts=[];
+    parts.push(env.ok ? "env ok" : "env err");
+    parts.push(health.ok ? "health ok" : "health err");
+    parts.push(cfg ? "cfg ok" : "cfg missing");
+    parts.push(libOk ? "lib ok" : "lib missing");
+    parts.push(clientOk ? "client ok" : "client missing");
+    setStatus(parts.join(" • "));
+
+    footerSupabase.textContent = clientOk ? "supabase: ready" : (cfg ? "supabase: pending" : "supabase: pending");
+  }
+
+  // ---- Tabs skeleton (your deeper features live in your existing build; this keeps the baseline stable)
+  function setTab(name){
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===name));
+    ["run","visit","capture","intel","mgmt","history"].forEach(k=>{
+      const el = document.getElementById("panel_"+k);
+      el.classList.toggle("hidden", k!==name);
     });
   }
 
-  // Simple Run Day list (local only until auth works)
-  const storeList = $("storeList");
-  const storeInput = $("storeInput");
-  const btnAddStore = $("btnAddStore");
-  const morningOut = $("morningOut");
-  const btnMorning = $("btnMorning");
-  const btnCopyMorning = $("btnCopyMorning");
-  const morningNotes = $("morningNotes");
-
-  let stores = [];
-
-  function renderStores(){
-    if(!stores.length){ storeList.textContent = "0 items"; return; }
-    storeList.textContent = stores.map((s,i)=>`${i+1}. ${s}`).join("\n");
+  function bootPanels(){
+    // Minimal placeholders to keep UI “operable baseline”
+    $("panel_run").innerHTML = `
+      <div class="pill">Start Day • Add stores • Generate Morning Rundown</div>
+      <div style="height:10px"></div>
+      <div class="grid2">
+        <label class="field"><div class="label">Today's stores (select or add)</div><input placeholder="Add store name…"/></label>
+        <label class="field"><div class="label">Template notes / priorities for the day</div><input placeholder="Priorities…"/></label>
+      </div>
+      <div class="row gap" style="margin-top:10px">
+        <button class="btn primary">Start Day</button>
+        <button class="btn">End Day</button>
+        <div class="pill">day: none</div>
+      </div>
+    `;
+    $("panel_visit").innerHTML = `<div class="pill">Visit workflow (Start/End timestamp + photos by category + OOS/Credits)</div>`;
+    $("panel_capture").innerHTML = `<div class="pill">Capture (barcode/QR + tag photo + category + store/visit binding)</div>`;
+    $("panel_intel").innerHTML = `<div class="pill">Intelligence (scans → structured notes)</div>`;
+    $("panel_mgmt").innerHTML = `<div class="pill">Management outputs (EOV/EOD/EOW exports)</div>`;
+    $("panel_history").innerHTML = `<div class="pill">History (days/visits + PDFs)</div>`;
   }
 
-  btnAddStore.addEventListener("click", ()=>{
-    const v = (storeInput.value||"").trim();
-    if(!v) return;
-    stores.push(v);
-    storeInput.value = "";
-    renderStores();
+  // ---- Wire up UI
+  btnConfig.onclick = openConfig;
+  btnDiagnostics.onclick = testConfig;
+  btnDiagInline.onclick = testConfig;
+  btnTestConfig.onclick = testConfig;
+  btnSignIn.onclick = signIn;
+  btnSignOut.onclick = signOut;
+
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.onclick = ()=>setTab(t.dataset.tab);
   });
 
-  btnMorning.addEventListener("click", ()=>{
-    const notes = (morningNotes.value||"").trim();
-    const out = [
-      "AXIS BLUE — Morning Rundown",
-      `Date: ${new Date().toLocaleDateString()}`,
-      "",
-      "Stores:",
-      ...(stores.length ? stores.map((s,i)=>`- ${s} (est: ___ min)`) : ["- (none)"]),
-      "",
-      "Notes / priorities:",
-      notes || "(none)",
-      "",
-      "Attestations:",
-      "- PREMIER steps will be completed per visit",
-      "- Safety shoes compliant: YES",
-      "",
-      "Total time estimate:",
-      "- Travel: ___ min",
-      "- Store time: ___ min",
-      "- Total: ___ min",
-    ].join("\n");
-    morningOut.textContent = out;
-  });
+  // Boot
+  (async function init(){
+    await refreshChips();
 
-  btnCopyMorning.addEventListener("click", async ()=>{
-    try{
-      await navigator.clipboard.writeText(morningOut.textContent || "");
-      badge(statusText, "good", "Copied");
-      setTimeout(()=>badge(statusText, "warn", "Waiting…"), 1200);
-    }catch{
-      badge(statusText, "bad", "Copy failed");
-      setTimeout(()=>badge(statusText, "warn", "Waiting…"), 1400);
-    }
-  });
-
-  // Buttons
-  $("btnConfig").addEventListener("click", openModal);
-  $("cfgClose").addEventListener("click", closeModal);
-
-  $("cfgSave").addEventListener("click", async ()=>{
-    const u = cfgUrl.value.trim();
-    const k = cfgKey.value.trim();
-    const pb = (cfgPhotos.value.trim() || "work-photos");
-    const eb = (cfgEvents.value.trim() || "events");
-
-    if(!u || !k){
-      appendCfgLog("Missing URL or Anon Key.");
-      badge(authBadge, "warn", "CFG");
-      return;
-    }
-    window.AxisConfig.set({ url:u, anonKey:k, photosBucket:pb, eventsBucket:eb });
-    appendCfgLog("Saved config locally.");
-    badge(authBadge, "warn", "CFG");
-    badge(statusText, "warn", "Re-init…");
-
-    const init = await window.AxisConfig.initSupabase();
-    if(init.ok){
-      footStatus.textContent = "supabase: ready";
-      badge(statusText, "good", "Config OK");
-    }else{
-      footStatus.textContent = "supabase: needs config";
-      badge(statusText, "bad", "Config fail");
-    }
-    setTimeout(()=>badge(statusText, "warn", "Waiting…"), 1500);
-  });
-
-  $("cfgClear").addEventListener("click", ()=>{
-    localStorage.removeItem(window.AxisConfig.KEY);
-    appendCfgLog("Cleared local config.");
-    cfgUrl.value = ""; cfgKey.value = "";
-    badge(authBadge, "warn", "CFG");
-    footStatus.textContent = "supabase: pending";
-    lockApp();
-  });
-
-  $("btnEnv").addEventListener("click", ()=>window.open("/api/env","_blank"));
-  $("btnHealth").addEventListener("click", ()=>window.open("/api/health","_blank"));
-  $("btnDiagnostics").addEventListener("click", ()=>alert("Diagnostics: open /api/env and /api/health.\nConfig is stored locally.\nAuth unlocks the dashboard."));
-  $("btnDiag2").addEventListener("click", ()=>alert("Diagnostics: open /api/env and /api/health.\nIf ENV/HEALTH are OK but login fails, it’s auth/session or Supabase config."));
-
-  // Auth
-  const btnSignIn = $("btnSignIn");
-  const btnSignOutTop = $("btnSignOutTop");
-  const email = $("email");
-  const password = $("password");
-
-  async function refreshSession(){
-    if(!window.supabase){
-      badge(authBadge, "warn", "CFG");
-      lockApp();
-      return;
-    }
-    try{
-      const { data } = await window.supabase.auth.getSession();
-      const user = data?.session?.user?.email;
-      if(user){
-        badge(authBadge, "good", "OK");
-        btnSignOutTop.disabled = false;
-        unlockApp();
-      }else{
-        badge(authBadge, "warn", "OUT");
-        btnSignOutTop.disabled = true;
-        lockApp();
-      }
-    }catch(e){
-      badge(authBadge, "bad", "ERR");
-      lockApp();
-    }
-  }
-
-  btnSignIn.addEventListener("click", async ()=>{
-    if(!window.supabase){
-      badge(statusText, "bad", "No config");
-      openModal();
-      return;
-    }
-    const e = email.value.trim();
-    const p = password.value.trim();
-    if(!e || !p){
-      badge(statusText, "bad", "Missing");
-      return;
-    }
-    badge(statusText, "warn", "Signing in…");
-    try{
-      const { error } = await window.supabase.auth.signInWithPassword({ email: e, password: p });
-      if(error){
-        badge(statusText, "bad", "Auth failed");
-        badge(authBadge, "bad", "ERR");
-        lockApp();
-        return;
-      }
-      badge(statusText, "good", "Signed in");
-      await refreshSession();
-      setTimeout(()=>badge(statusText, "warn", "Waiting…"), 1200);
-    }catch(e2){
-      badge(statusText, "bad", "Auth error");
-      badge(authBadge, "bad", "ERR");
-      lockApp();
-    }
-  });
-
-  btnSignOutTop.addEventListener("click", async ()=>{
-    if(!window.supabase) return;
-    badge(statusText, "warn", "Signing out…");
-    try{
-      await window.supabase.auth.signOut();
-      badge(statusText, "good", "Signed out");
-      await refreshSession();
-      setTimeout(()=>badge(statusText, "warn", "Waiting…"), 1200);
-    }catch{
-      badge(statusText, "bad", "Signout err");
-    }
-  });
-
-  // Init
-  (async function boot(){
-    setTabs();
-    renderStores();
-
-    badge(statusText, "warn", "Waiting…");
-    await pingEnv();
-    await pingHealth();
-
-    // Initialize Supabase if config exists
-    const init = await window.AxisConfig.initSupabase();
-    if(init.ok){
-      footStatus.textContent = "supabase: ready";
-      badge(authBadge, "warn", "OUT");
-      await refreshSession();
-    }else{
-      footStatus.textContent = "supabase: needs config";
-      badge(authBadge, "warn", "CFG");
-      lockApp();
+    // Determine auth state
+    const ready = await ensureSupabaseReady();
+    if(window.supabase && window.supabase.auth){
+      setAuthChip("CFG","cfg");
+      setStatus("Ready. Sign in.");
+      footerSupabase.textContent="supabase: ready";
+    } else {
+      setAuthChip("CFG","cfg");
+      setStatus(ready.reason === "no config" ? "Config required" : "Waiting…");
     }
 
-    // Keep session fresh
-    setInterval(refreshSession, 4000);
+    dashboard.classList.add("dim");
+    btnSignOut.disabled = true;
+
+    bootPanels();
+    setTab("run");
   })();
 })();
