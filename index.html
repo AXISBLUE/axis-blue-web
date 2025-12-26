@@ -3,129 +3,249 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AXIS BLUE — Web Online</title>
-  <link rel="icon" href="assets/axis_logo.png" />
-  <link rel="stylesheet" href="styles.css" />
+  <title>AXIS BLUE • Field Ops</title>
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
+  <div class="bg"></div>
+
   <header class="top">
     <div class="brand">
-      <div class="title">AXIS BLUE — Web Online</div>
-      <div class="subtitle">Private test environment • aptest.axisblue.io</div>
+      <div class="brand-mark">AXIS</div>
+      <div class="brand-text">
+        <div class="h1">AXIS BLUE</div>
+        <div class="h2">Field Operations • Test</div>
+        <div class="sub">aptest.axisblue.io</div>
+      </div>
     </div>
-    <div class="chips">
-      <span class="chip">Environment: Test</span>
-      <span class="chip">Data: Supabase</span>
-      <span class="chip">Build: Static + Functions</span>
+
+    <div class="badges">
+      <span class="pill">Environment: Test</span>
+      <span class="pill">Data: Supabase</span>
+      <span class="pill">Build: Pages + Functions</span>
     </div>
   </header>
 
-  <!-- LOCK SCREEN (only thing visible until auth succeeds) -->
   <main class="wrap">
-    <section id="authCard" class="card">
-      <h2>Authentication</h2>
-      <p class="muted">Sign in to unlock the workflow. If auth fails, you'll see the reason.</p>
-
-      <div class="grid">
-        <label>
-          <div class="label">Email</div>
-          <input id="email" type="email" placeholder="you@domain.com" autocomplete="username" />
-        </label>
-
-        <label>
-          <div class="label">Password</div>
-          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
-        </label>
+    <!-- AUTH (always visible) -->
+    <section class="card" id="authCard">
+      <div class="cardHead">
+        <div class="cardTitle">Authentication</div>
+        <div class="cardMeta" id="authMeta">Signed out</div>
       </div>
-
-      <div class="row">
-        <button id="btnSignIn" class="btn primary">Sign In</button>
-        <button id="btnSignOut" class="btn" disabled>Sign Out</button>
-        <span id="authState" class="muted small">Signed out</span>
-      </div>
-
-      <div id="authError" class="error" hidden></div>
-    </section>
-
-    <!-- APP (hidden until signed in) -->
-    <section id="app" class="card" hidden>
-      <h2>Run Day</h2>
-      <p class="muted">You’re signed in. This section stays locked until auth succeeds.</p>
-
-      <div class="divider"></div>
-
-      <h3>Intelligence Capture</h3>
 
       <div class="grid2">
-        <div class="panel">
-          <h4>Barcode / QR Scan</h4>
-          <p class="muted small">Uses your camera when supported. Fallback to manual entry if not.</p>
-
-          <div class="row">
-            <button id="btnStartScan" class="btn primary">Start Camera Scan</button>
-            <button id="btnStopScan" class="btn" disabled>Stop</button>
-          </div>
-
-          <video id="video" playsinline muted></video>
-
-          <label>
-            <div class="label">Detected code</div>
-            <input id="codeValue" type="text" placeholder="(auto-populates)" />
-          </label>
-
-          <label>
-            <div class="label">Product name (manual)</div>
-            <input id="productName" type="text" placeholder="Optional manual label" />
-          </label>
-
-          <label>
-            <div class="label">Tag photo required</div>
-            <input id="tagPhoto" type="file" accept="image/*" capture="environment" />
-          </label>
-
-          <div class="row">
-            <button id="btnSaveCapture" class="btn primary">Save Capture</button>
-            <span id="captureStatus" class="muted small"></span>
-          </div>
+        <div class="field">
+          <label>Email</label>
+          <input id="authEmail" type="email" placeholder="you@domain.com" autocomplete="username" />
         </div>
-
-        <div class="panel">
-          <h4>NFC (when available)</h4>
-          <p class="muted small">Works only on devices/browsers that support Web NFC.</p>
-
-          <div class="row">
-            <button id="btnStartNfc" class="btn primary">Start NFC Scan</button>
-            <button id="btnStopNfc" class="btn" disabled>Stop</button>
-          </div>
-
-          <div class="muted small" id="nfcStatus">Idle</div>
-
-          <label>
-            <div class="label">NFC payload</div>
-            <textarea id="nfcPayload" rows="4" placeholder="(auto-populates)"></textarea>
-          </label>
+        <div class="field">
+          <label>Password</label>
+          <input id="authPassword" type="password" placeholder="••••••••" autocomplete="current-password" />
         </div>
       </div>
-
-      <div class="divider"></div>
-
-      <h3>Management Output</h3>
-      <p class="muted small">Teams “send” needs an API/webhook. For now: copy + email draft works everywhere.</p>
-
-      <label>
-        <div class="label">Summary text</div>
-        <textarea id="summary" rows="6" placeholder="Write a quick summary here..."></textarea>
-      </label>
 
       <div class="row">
-        <button id="btnCopySummary" class="btn">Copy Summary</button>
-        <button id="btnEmailSummary" class="btn">Email Draft</button>
-        <span id="mgmtStatus" class="muted small"></span>
+        <button class="btn primary" id="btnSignIn">Sign in</button>
+        <button class="btn" id="btnSignOut">Sign out</button>
+        <span class="msg" id="authMsg"></span>
       </div>
     </section>
+
+    <!-- LOCKED APP (hidden until auth) -->
+    <section class="card locked" id="appCard" aria-hidden="true">
+      <div class="cardHead">
+        <div class="cardTitle">Run Day</div>
+        <div class="cardMeta" id="appMeta">Locked until sign-in succeeds.</div>
+      </div>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="tabDay">Day</button>
+        <button class="tab" data-tab="tabVisit">Visit</button>
+        <button class="tab" data-tab="tabCapture">Capture</button>
+        <button class="tab" data-tab="tabMgmt">Management</button>
+      </nav>
+
+      <!-- DAY -->
+      <div class="tabPane active" id="tabDay">
+        <div class="sectionTitle">Start Day</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Merchandiser name</label>
+            <input id="dayMerchName" type="text" placeholder="Gabriel Kearns" />
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input id="dayDate" type="date" />
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="btnBeginDay">Begin Day</button>
+          <button class="btn" id="btnLoadDay">Load Active Day</button>
+          <span class="msg" id="dayMsg"></span>
+        </div>
+        <div class="kv">
+          <div><span>Active Day ID:</span> <code id="activeDayId">None</code></div>
+        </div>
+      </div>
+
+      <!-- VISIT -->
+      <div class="tabPane" id="tabVisit">
+        <div class="sectionTitle">Visit</div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Store</label>
+            <select id="visitStore">
+              <option value="">Select…</option>
+              <option value="WM1492|Walmart 1492|14000 E Exposition Ave Aurora CO 80012">Walmart 1492</option>
+              <option value="KS00014|King Soopers 00014|655 Peoria St Aurora CO 80011">King Soopers 00014</option>
+              <option value="FD3477|Family Dollar 3477|620 Peoria St Aurora CO 80011">Family Dollar 3477</option>
+              <option value="TGT1471|Target SC 1471|14200 E Ellsworth Ave Aurora CO 80012">Target SC 1471</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Visit note</label>
+            <input id="visitNote" type="text" placeholder="Delivery, reset, follow-up… (optional)" />
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn primary" id="btnStartVisit">Start Visit</button>
+          <button class="btn danger" id="btnEndVisit">End Visit</button>
+          <span class="msg" id="visitMsg"></span>
+        </div>
+
+        <div class="kv">
+          <div><span>Active Visit ID:</span> <code id="activeVisitId">None</code></div>
+          <div><span>Status:</span> <span id="visitStatus">No active visit</span></div>
+        </div>
+
+        <hr class="sep" />
+
+        <div class="sectionTitle">Out-of-Stock / Breakage / OOD</div>
+        <div class="grid2">
+          <div class="field">
+            <label>Issue type</label>
+            <select id="oosType">
+              <option value="OOS">Out of Stock</option>
+              <option value="BREAKAGE">Breakage</option>
+              <option value="OOD">Out of Date</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Item (scan or type)</label>
+            <input id="oosItem" type="text" placeholder="UPC / QR payload / SKU / description" />
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Qty</label>
+            <input id="oosQty" type="number" min="0" step="1" placeholder="0" />
+          </div>
+          <div class="field">
+            <label>Notes</label>
+            <input id="oosNote" type="text" placeholder="Optional" />
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="btnAddOOS">Add Issue</button>
+          <span class="msg" id="oosMsg"></span>
+        </div>
+
+        <div class="list" id="oosList"></div>
+      </div>
+
+      <!-- CAPTURE -->
+      <div class="tabPane" id="tabCapture">
+        <div class="sectionTitle">Photo + Intelligence Capture</div>
+
+        <div class="grid2">
+          <div class="field">
+            <label>Photo category</label>
+            <select id="capCategory">
+              <option value="Sales Floor">Sales Floor</option>
+              <option value="Backroom">Backroom</option>
+              <option value="Credits">Credits</option>
+              <option value="Coolers">Coolers</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Optional label</label>
+            <input id="capLabel" type="text" placeholder="Aisle 8 endcap / Cooler door 2 / credits pallet…" />
+          </div>
+        </div>
+
+        <div class="scanBlock">
+          <div class="scanHead">
+            <div class="scanTitle">Barcode / QR Scan (auto-start when possible)</div>
+            <div class="scanMeta" id="scanMeta">Ready</div>
+          </div>
+
+          <div class="row">
+            <button class="btn primary" id="btnEnableCamera">Enable Camera Scan</button>
+            <button class="btn" id="btnStopCamera">Stop</button>
+          </div>
+
+          <video id="scanVideo" class="video" playsinline muted></video>
+
+          <div class="field">
+            <label>Detected code</label>
+            <input id="capDetected" type="text" placeholder="Auto-populates…" />
+          </div>
+        </div>
+
+        <div class="scanBlock">
+          <div class="scanHead">
+            <div class="scanTitle">NFC (iOS fallback via Shortcut URL param)</div>
+            <div class="scanMeta" id="nfcMeta">If opened as ?nfc=..., it will auto-fill.</div>
+          </div>
+
+          <div class="field">
+            <label>NFC payload</label>
+            <input id="capNfc" type="text" placeholder="Auto-populates when available…" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Tag photo required</label>
+          <input id="capFile" type="file" accept="image/*" />
+        </div>
+
+        <div class="row">
+          <button class="btn primary" id="btnSaveCapture">Save Capture</button>
+          <span class="msg" id="capMsg"></span>
+        </div>
+
+        <div class="list" id="capList"></div>
+      </div>
+
+      <!-- MGMT -->
+      <div class="tabPane" id="tabMgmt">
+        <div class="sectionTitle">Management Output</div>
+        <div class="field">
+          <label>Summary text</label>
+          <textarea id="mgmtText" rows="6" placeholder="Quick summary for management…"></textarea>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnCopy">Copy Summary</button>
+          <button class="btn primary" id="btnEmailDraft">Email Draft</button>
+          <span class="msg" id="mgmtMsg"></span>
+        </div>
+        <div class="hint">
+          Teams “send” requires a webhook/API. This panel gives copy + email draft today.
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>AXIS BLUE • Private test environment</span>
+      <span id="envStatus">env: loading…</span>
+    </footer>
   </main>
 
-  <script type="module" src="supabaseClient.js"></script>
-  <script type="module" src="app.js"></script>
+  <script src="/supabaseClient.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>
