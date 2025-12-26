@@ -1,237 +1,376 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>AXIS BLUE — Field Execution</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AXIS BLUE — Field Execution (Test)</title>
+
   <style>
     :root{
-      --bg:#f4f7ff; --card:#ffffff; --ink:#0b1220; --muted:#5b6477; --line:#d7e1ff;
-      --blue:#1f4bd8; --blue2:#1538a8; --ghost:#eef3ff;
-      --ok:#047857; --warn:#b45309; --bad:#b91c1c;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --bg0:#061125;
+      --bg1:#0a1d3a;
+      --card:rgba(255,255,255,0.06);
+      --card2:rgba(255,255,255,0.09);
+      --line:rgba(255,255,255,0.12);
+      --text:rgba(255,255,255,0.92);
+      --muted:rgba(255,255,255,0.70);
+      --muted2:rgba(255,255,255,0.55);
+      --accent:#2f7dff;
+      --accent2:#59a7ff;
+      --danger:#ff5c5c;
+      --ok:#3ddc84;
+
+      --radius:16px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      --font: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:1100px;margin:22px auto;padding:0 16px 92px}
-    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,#ffffff,#f7faff)}
-    .brand{display:flex;align-items:center;gap:12px}
-    .logo{width:48px;height:48px;border-radius:12px;background:var(--ghost);display:grid;place-items:center;border:1px solid var(--line);color:var(--blue);font-weight:900}
-    h1{margin:0;font-size:26px;letter-spacing:-0.02em}
-    .sub{margin:4px 0 0;color:var(--muted);font-size:13px}
-    .banner{margin-top:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:linear-gradient(90deg,#eaf0ff,#ffffff);color:#223;font-size:13px}
-    .right{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .pill{display:inline-flex;gap:8px;align-items:center;padding:7px 10px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:12px}
-    .pill strong{color:#223}
-    .mono{font-family:var(--mono)}
-    .tabs{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .tab{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-weight:800;cursor:pointer;font-size:13px}
-    .tab.active{background:var(--ghost);color:var(--blue)}
-    .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
-    .card h2{margin:0 0 10px;font-size:16px}
-    .row{display:grid;grid-template-columns:1fr;gap:10px}
-    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
-    input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;background:#fff;color:var(--ink)}
-    textarea{min-height:92px;resize:vertical}
-    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    button{border:0;background:var(--blue);color:#fff;padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800;font-size:14px}
-    button:hover{background:var(--blue2)}
-    button.secondary{background:#24324d}
-    button.ghost{background:var(--ghost);color:var(--blue);border:1px solid var(--line)}
-    button:disabled{opacity:.45;cursor:not-allowed}
-    .hint{color:var(--muted);font-size:13px;margin:10px 0 0}
-    .hidden{display:none}
-    .statusGood{color:var(--ok);font-weight:900}
-    .statusBad{color:var(--bad);font-weight:900}
-    .statusWarn{color:var(--warn);font-weight:900}
-    .footerWrap{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 12px}
-    .footer{max-width:1100px;margin:0 auto;padding:0 4px;color:var(--muted);font-size:11px;line-height:1.25;text-align:center}
-    .footer .legal{font-family:var(--mono);font-size:10px;color:#6a7388}
+
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:var(--font);
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 15% 10%, rgba(60,135,255,0.25), transparent 60%),
+        radial-gradient(800px 500px at 80% 20%, rgba(0,190,255,0.12), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 18px 110px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom: 18px;
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .brand h1{
+      margin:0;
+      font-size: 28px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand .sub{
+      color:var(--muted);
+      font-size: 14px;
+    }
+
+    .pillrow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,0.12);
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--muted);
+      backdrop-filter: blur(10px);
+    }
+
+    .status{
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .status span{
+      padding-left: 8px;
+      color: var(--text);
+    }
+    #status[data-type="error"]{ color: var(--danger); }
+    #status[data-type="success"]{ color: var(--ok); }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    @media (min-width: 860px){
+      .grid{
+        grid-template-columns: 1.1fr 0.9fr;
+        align-items:start;
+      }
+    }
+
+    .card{
+      border:1px solid var(--line);
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .card h2{
+      margin:0 0 10px 0;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+
+    .hint{
+      margin: 0 0 12px 0;
+      color: var(--muted2);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .row{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .formrow{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 520px){
+      .formrow.two{
+        grid-template-columns: 1fr 1fr;
+      }
+      .formrow.three{
+        grid-template-columns: 1.2fr 0.8fr 1fr;
+      }
+    }
+
+    label{
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 6px 2px;
+    }
+
+    input, select{
+      width:100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,0.15);
+      color: var(--text);
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    input::placeholder{ color: rgba(255,255,255,0.35); }
+
+    .btnrow{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    button{
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(0,0,0,0.18);
+      color: var(--text);
+      cursor:pointer;
+      transition: transform 120ms ease, background 120ms ease;
+    }
+    button:hover{ transform: translateY(-1px); background: rgba(0,0,0,0.26); }
+    button:disabled{
+      opacity: 0.45;
+      cursor:not-allowed;
+      transform:none;
+    }
+
+    .primary{
+      border-color: rgba(60,140,255,0.45);
+      background: linear-gradient(180deg, rgba(55,140,255,0.35), rgba(55,140,255,0.18));
+    }
+
+    .danger{
+      border-color: rgba(255,92,92,0.45);
+      background: linear-gradient(180deg, rgba(255,92,92,0.22), rgba(255,92,92,0.10));
+    }
+
+    .kpi{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .kpi .mini{
+      border:1px solid var(--line);
+      background: var(--card2);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .mini .t{ font-size: 12px; color: var(--muted); margin: 0 0 6px 0; }
+    .mini .v{ font-size: 14px; color: var(--text); margin: 0; }
+
+    .footer{
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 14px 18px;
+      background: rgba(0,0,0,0.35);
+      border-top: 1px solid rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      font-size: 12px;
+      color: rgba(255,255,255,0.68);
+      text-align: center;
+    }
+    .footer b{ color: rgba(255,255,255,0.86); }
+    .footer .meta{ display:block; margin-top: 6px; color: rgba(255,255,255,0.50); }
   </style>
 </head>
+
 <body>
   <div class="wrap">
-    <div class="top">
+    <div class="topbar">
       <div class="brand">
-        <div class="logo">AB</div>
-        <div>
-          <h1>AXIS BLUE — Field Execution</h1>
-          <div class="sub">apptest.axisblue.io (<span class="mono" id="host"></span>)</div>
-          <div class="banner"><b>Soft product launch:</b> operational workflow environment. Expect iteration, not instability.</div>
-          <div class="tabs">
-            <div class="tab active" id="tabRun" onclick="showMode('run')">Run Day</div>
-            <div class="tab" id="tabIntel" onclick="showMode('intel')">Intelligence Lab</div>
+        <h1>AXIS BLUE — Web Online</h1>
+        <div class="sub">Private test environment (<b>apptest.axisblue.io</b>)</div>
+        <div class="status">
+          <div id="status" data-type="info">Initializing…</div>
+          <div style="margin-top:6px;color:var(--muted);font-size:13px;">
+            Signed in as: <span id="who">Loading…</span>
           </div>
         </div>
       </div>
 
-      <div class="right">
-        <span class="pill"><strong>User:</strong> <span id="userPill" class="mono">signed out</span></span>
-        <span class="pill"><strong>DB:</strong> <span id="dbPill">offline</span></span>
-        <button class="ghost" onclick="signOut()">Sign out</button>
+      <div class="pillrow">
+        <div class="pill">Environment: Test</div>
+        <div class="pill">Data: Supabase</div>
+        <div class="pill">Build: Static + Functions</div>
       </div>
     </div>
 
-    <!-- AUTH -->
     <div class="grid">
-      <div class="card" id="authCard">
-        <h2>Sign in</h2>
-        <div class="row2">
-          <div>
-            <label>Email</label>
-            <input id="authEmail" type="email" placeholder="you@domain.com"/>
-          </div>
-          <div>
-            <label>Password</label>
-            <input id="authPass" type="password" placeholder="••••••••"/>
-          </div>
-        </div>
-        <div class="btns">
-          <button onclick="signIn()">Sign in</button>
-        </div>
-        <p class="hint">This keeps your Supabase storage locked to your user via RLS. Cloudflare Access can still sit in front of this domain.</p>
-      </div>
-    </div>
-
-    <!-- RUN DAY -->
-    <div id="modeRun" class="grid hidden">
+      <!-- LEFT: Main flow -->
       <div class="card">
-        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
-          <h2>Begin Day</h2>
-          <div id="beginState" class="statusBad">Not started</div>
-        </div>
+        <h2>Authentication</h2>
+        <p class="hint">Sign in to unlock day + visit workflow. If auth fails, you will see an error toast and status message.</p>
 
-        <div class="row2">
+        <div class="formrow two">
           <div>
-            <label>Merchandiser</label>
-            <input id="merchandiser" placeholder="Merchandiser name"/>
+            <label for="email">Email</label>
+            <input id="email" type="email" placeholder="you@company.com" autocomplete="username" />
           </div>
           <div>
-            <label>Date</label>
-            <input id="date" type="date"/>
+            <label for="password">Password</label>
+            <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
           </div>
         </div>
 
-        <div class="btns">
-          <button id="btnBeginDay" onclick="beginDay()">Begin Day</button>
-          <button class="ghost" onclick="loadToday()">Load today</button>
-          <button class="secondary" onclick="refreshFromDB()">Refresh from DB</button>
-          <button class="ghost" onclick="downloadDBBackup()">Download DB backup JSON</button>
+        <div class="btnrow">
+          <button id="btnSignIn" class="primary">Sign In</button>
+          <button id="btnSignOut" class="danger" disabled>Sign Out</button>
         </div>
 
-        <p class="hint">Begin Day creates a day record in Supabase and becomes your anchor for visits + intel records.</p>
-      </div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0;">
 
-      <div class="card">
+        <h2>Start Day</h2>
+        <p class="hint">Creates a Day record and becomes the parent container for visits. This is the base of your “history” later.</p>
+
+        <div class="formrow two">
+          <div>
+            <label for="merchName">Merchandiser name</label>
+            <input id="merchName" type="text" placeholder="Gabriel Kearns" />
+          </div>
+          <div>
+            <label for="dayDate">Date</label>
+            <input id="dayDate" type="date" />
+          </div>
+        </div>
+
+        <div class="btnrow">
+          <button id="btnBeginDay" class="primary" disabled>Begin Day</button>
+        </div>
+
+        <div class="kpi">
+          <div class="mini">
+            <p class="t">Active Day</p>
+            <p class="v" id="dayInfo">No day active</p>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0;">
+
         <h2>Store Visit</h2>
+        <p class="hint">Starts a Visit under the active Day. Later we add photo intake + NFC/QR/UPC capture here.</p>
 
-        <div class="row2">
+        <div class="formrow">
           <div>
-            <label>Store</label>
-            <select id="store"></select>
-          </div>
-          <div>
-            <label>Urgent issue flag</label>
-            <select id="urgentFlag">
-              <option value="no">No</option>
-              <option value="yes">Yes</option>
-            </select>
+            <label for="storeSelect">Store</label>
+            <select id="storeSelect"></select>
           </div>
         </div>
 
-        <div class="row">
-          <div><label>Sales opportunities</label><textarea id="salesOpp"></textarea></div>
-          <div><label>Inventory concerns / SKUs</label><textarea id="inventoryConcerns"></textarea></div>
-          <div><label>Questions / comments for PSR/MSR</label><textarea id="repQuestions"></textarea></div>
+        <div class="btnrow">
+          <button id="btnStartVisit" class="primary" disabled>Start Visit</button>
         </div>
 
-        <div class="btns">
-          <button id="btnStartVisit" onclick="startVisit()">Start Visit</button>
-          <button class="secondary" id="btnEndVisit" onclick="endVisit()">End Visit</button>
-          <button class="ghost" onclick="clearVisitForm()">Clear</button>
+        <div class="kpi">
+          <div class="mini">
+            <p class="t">Active Visit</p>
+            <p class="v" id="visitInfo">No visit active</p>
+          </div>
         </div>
-
-        <p class="hint">Visits sync to Supabase immediately. If you lose connection, we’ll add offline queue next.</p>
       </div>
 
+      <!-- RIGHT: Documents -->
       <div class="card">
-        <h2>Run Day Log</h2>
-        <div id="runLog"></div>
-      </div>
-    </div>
+        <h2>Documents</h2>
+        <p class="hint">These buttons are “wired” now. Next we’ll generate EVS + PDR using your locked templates.</p>
 
-    <!-- INTEL -->
-    <div id="modeIntel" class="grid hidden">
-      <div class="card">
-        <h2>Intelligence Lab — Capture</h2>
-
-        <div class="row2">
-          <div>
-            <label>Store (optional)</label>
-            <select id="intelStore"></select>
-          </div>
-          <div>
-            <label>Identifier type</label>
-            <select id="intelType">
-              <option value="NFC">NFC</option>
-              <option value="UPC">UPC</option>
-              <option value="QR">QR</option>
-              <option value="MANUAL">Manual</option>
-            </select>
-          </div>
+        <div class="btnrow">
+          <button id="btnEVS" disabled>Generate EVS</button>
+          <button id="btnPDR" disabled>Generate PDR</button>
         </div>
 
-        <div class="row2">
-          <div>
-            <label>Identifier value (ex: UPC)</label>
-            <input id="intelValue" placeholder="012345678905"/>
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0;">
+
+        <h2>System Notes</h2>
+        <p class="hint">
+          This is a controlled test release for operational readiness. Data is stored per-user via Supabase auth/RLS.
+        </p>
+
+        <div class="kpi">
+          <div class="mini">
+            <p class="t">Data capture next</p>
+            <p class="v">NFC • QR • UPC • Photos</p>
           </div>
-          <div>
-            <label>Payload (ex: NFC raw data)</label>
-            <input id="intelPayload" placeholder="paste raw payload here"/>
+          <div class="mini">
+            <p class="t">PDF rules</p>
+            <p class="v">Master template + legal footer</p>
           </div>
         </div>
-
-        <div class="row">
-          <div>
-            <label>Notes</label>
-            <textarea id="intelNotes" placeholder="What is this tag tied to? Where is it used? Any mapping hints?"></textarea>
-          </div>
-        </div>
-
-        <div class="btns">
-          <button id="btnSaveIntel" onclick="saveIntel()">Save Intel Record</button>
-          <button class="ghost" onclick="clearIntel()">Clear</button>
-          <button class="secondary" onclick="refreshFromDB()">Refresh from DB</button>
-          <button class="ghost" onclick="downloadIntelExport()">Download Intel JSON</button>
-        </div>
-
-        <p class="hint">Direct NFC reading in iOS Safari isn’t reliable. Today’s workflow: tap with your NFC tool, paste payload here, optionally add UPC/notes.</p>
       </div>
-
-      <div class="card">
-        <h2>Intel Records</h2>
-        <div id="intelLog"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="footerWrap">
-    <div class="footer">
-      <div><b>AXIS BLUE</b> — Field Execution Tools</div>
-      <div class="legal">
-        LEGAL: Internal operational tooling for field execution support. Do not upload confidential, regulated, or customer-proprietary data.
-        Use at your own discretion. Storage is restricted to authenticated users (RLS).
-      </div>
-      <div class="legal">SOFT PRODUCT LAUNCH: Feature set is operational and evolving. Feedback drives iteration.</div>
     </div>
   </div>
 
-  <!-- Supabase JS (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+  <div class="footer">
+    <b>AXIS BLUE</b> is a private operational system. Unauthorized access, sharing, or distribution is prohibited.
+    <span class="meta">Test environment: apptest.axisblue.io • Soft launch phase • Internal use only</span>
+  </div>
+
+  <!-- App scripts -->
+  <script type="module" src="./supabaseClient.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

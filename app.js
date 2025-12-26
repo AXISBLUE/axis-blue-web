@@ -1,422 +1,319 @@
-/* AXIS BLUE — Supabase-wired v1
-   - Auth (email+password)
-   - Tables: axis_days, axis_visits, axis_intel
-   - UI: Run Day + Intelligence Lab
-*/
+// axis-blue-web/app.js
+import { supabase } from "./supabaseClient.js";
 
-const SUPABASE_URL = "https://frhrutiqpshznnyurmlq.supabase.co"\;
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZyaHJ1dGlxcHNoem5ueXVybWxxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2ODc0MjksImV4cCI6MjA4MjI2MzQyOX0.3Bhg7iw35aTsXnctpk2m2UDui6PaXUOJKVUmy4SxnNY";
+/**
+ * AXIS BLUE – App Test (static UI + Supabase)
+ * This file focuses on:
+ * - Auth (sign-in/sign-out)
+ * - Begin Day (axis_days)
+ * - Start Visit (axis_visits)
+ * - UI feedback (status + toast)
+ *
+ * NOTE: Your Supabase tables must exist:
+ * - public.axis_days (id uuid PK, user_id uuid, day_date date/text, merchandiser_name text, created_at timestamptz default now())
+ * - public.axis_visits (id uuid PK, user_id uuid, day_id uuid, store_name text, started_at timestamptz default now())
+ */
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// --------------------
+// Tiny DOM helpers
+// --------------------
+const $ = (sel) => document.querySelector(sel);
 
-// Stores list
-const STORES = [
-  { id: "WM1492", name: "Walmart 1492", address: "14000 E Exposition Ave Aurora CO 80012", delivery: "usually yes" },
-  { id: "KS00014", name: "King Soopers 00014", address: "655 Peoria St Aurora CO 80011", delivery: "usually no" },
-  { id: "FD3477", name: "Family Dollar 3477", address: "620 Peoria St Aurora CO 80011", delivery: "usually no" },
-  { id: "TGT1471", name: "Target SC 1471", address: "14200 E Ellsworth Ave Aurora CO 80012", delivery: "usually no" }
+function setStatus(msg, type = "info") {
+  const el = $("#status");
+  if (!el) return;
+  el.textContent = msg;
+  el.dataset.type = type;
+}
+
+function toast(msg, type = "info", ms = 2200) {
+  let wrap = $("#toast");
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.id = "toast";
+    wrap.style.position = "fixed";
+    wrap.style.left = "50%";
+    wrap.style.bottom = "22px";
+    wrap.style.transform = "translateX(-50%)";
+    wrap.style.padding = "10px 14px";
+    wrap.style.borderRadius = "10px";
+    wrap.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    wrap.style.fontSize = "14px";
+    wrap.style.zIndex = "9999";
+    wrap.style.border = "1px solid rgba(255,255,255,0.14)";
+    wrap.style.backdropFilter = "blur(10px)";
+    wrap.style.display = "none";
+    document.body.appendChild(wrap);
+  }
+
+  wrap.style.display = "block";
+  wrap.style.opacity = "1";
+  wrap.style.background = type === "error" ? "rgba(140, 30, 30, 0.65)"
+    : type === "success" ? "rgba(20, 110, 55, 0.65)"
+    : "rgba(20, 35, 65, 0.65)";
+  wrap.textContent = msg;
+
+  window.clearTimeout(wrap._t);
+  wrap._t = window.setTimeout(() => {
+    wrap.style.opacity = "0";
+    window.setTimeout(() => (wrap.style.display = "none"), 250);
+  }, ms);
+}
+
+// --------------------
+// App state
+// --------------------
+const state = {
+  user: null,
+  day: null,      // { id, day_date, merchandiser_name }
+  visit: null,    // { id, store_name }
+};
+
+const stores = [
+  "Walmart 1492",
+  "King Soopers 00014",
+  "Family Dollar 3477",
+  "Target SC 1471",
 ];
 
-function $(id){ return document.getElementById(id); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-
-let state = {
-  user: null,
-  day: null,        // axis_days row
-  activeVisit: null,
-  visits: [],
-  intel: []
-};
-
-function setMode(mode){
-  $("modeRun").classList.toggle("hidden", mode !== "run");
-  $("modeIntel").classList.toggle("hidden", mode !== "intel");
-  $("tabRun").classList.toggle("active", mode === "run");
-  $("tabIntel").classList.toggle("active", mode === "intel");
-}
-window.showMode = (m)=> setMode(m);
-
-function setPills(){
-  $("host").textContent = window.location.host || "unknown";
-  $("userPill").textContent = state.user ? state.user.email : "signed out";
-  $("dbPill").textContent = state.user ? "connected" : "offline";
+// --------------------
+// Auth
+// --------------------
+async function refreshUser() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) {
+    state.user = null;
+    return null;
+  }
+  state.user = data?.user ?? null;
+  return state.user;
 }
 
-function renderStores(){
-  const storeSel = $("store");
-  const intelSel = $("intelStore");
-
-  storeSel.innerHTML = "";
-  intelSel.innerHTML = "";
-
-  const opt0 = document.createElement("option");
-  opt0.value = "";
-  opt0.textContent = "(none)";
-  intelSel.appendChild(opt0);
-
-  STORES.forEach(s=>{
-    const o1 = document.createElement("option");
-    o1.value = s.id;
-    o1.textContent = s.name;
-    storeSel.appendChild(o1);
-
-    const o2 = document.createElement("option");
-    o2.value = s.id;
-    o2.textContent = s.name;
-    intelSel.appendChild(o2);
-  });
+function requireUser() {
+  if (!state.user) {
+    toast("Please sign in first.", "error");
+    throw new Error("Not signed in");
+  }
+  return state.user;
 }
 
-function requireAuth(){
-  if (!state.user) throw new Error("Not signed in.");
+async function signIn(email, password) {
+  setStatus("Signing in…");
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    setStatus("Sign-in failed.", "error");
+    toast(error.message || "Sign-in failed.", "error");
+    return;
+  }
+  await refreshUser();
+  setStatus("Signed in.", "success");
+  toast("Signed in ✓", "success");
+  render();
+  return data;
 }
 
-function requireDay(){
-  if (!state.day) throw new Error("Begin Day first.");
+async function signOut() {
+  setStatus("Signing out…");
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    setStatus("Sign-out failed.", "error");
+    toast(error.message || "Sign-out failed.", "error");
+    return;
+  }
+  state.user = null;
+  state.day = null;
+  state.visit = null;
+  setStatus("Signed out.", "info");
+  toast("Signed out.", "info");
+  render();
 }
 
-function escapeHTML(str){
-  return (str || "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[m]));
-}
+// --------------------
+// Data actions (the real “fix” is adding user_id)
+// --------------------
+async function beginDay() {
+  const user = requireUser();
 
-function renderRunLog(){
-  const el = $("runLog");
-  el.innerHTML = "";
-
-  if (!state.visits.length){
-    el.innerHTML = `<div style="color:#5b6477">No visits yet.</div>`;
+  const merchName = ($("#merchName")?.value || "").trim();
+  if (!merchName) {
+    toast("Enter merchandiser name.", "error");
+    $("#merchName")?.focus();
     return;
   }
 
-  state.visits.slice().reverse().forEach(v=>{
-    const ended = v.ended_at ? `<span class="statusGood">ENDED</span>` : `<span class="statusWarn">IN PROGRESS</span>`;
-    const urgent = v.urgent ? ` · <span class="statusWarn">URGENT</span>` : "";
-    el.innerHTML += `
-      <div style="padding:12px;border:1px solid #d7e1ff;border-radius:14px;background:#fbfdff;margin-bottom:10px">
-        <div style="font-weight:900">${escapeHTML(v.store_name)} <span style="font-size:12px;color:#5b6477">(${escapeHTML(v.store_id)})</span></div>
-        <div style="font-size:12px;color:#5b6477">${ended}${urgent}</div>
-        <div style="margin-top:8px;font-size:13px">
-          <div><b>Sales:</b> ${escapeHTML((v.sales_opp||"").slice(0,140) || "(none)")}</div>
-          <div><b>Inventory:</b> ${escapeHTML((v.inventory_concerns||"").slice(0,140) || "(none)")}</div>
-          <div><b>PSR/MSR:</b> ${escapeHTML((v.rep_questions||"").slice(0,140) || "(none)")}</div>
-        </div>
-      </div>
-    `;
-  });
-}
+  const dayDate = $("#dayDate")?.value || new Date().toISOString().slice(0, 10);
 
-function renderIntelLog(){
-  const el = $("intelLog");
-  el.innerHTML = "";
+  setStatus("Creating day record…");
 
-  if (!state.intel.length){
-    el.innerHTML = `<div style="color:#5b6477">No intel records yet.</div>`;
-    return;
-  }
-
-  state.intel.slice().reverse().forEach(r=>{
-    el.innerHTML += `
-      <div style="padding:12px;border:1px solid #d7e1ff;border-radius:14px;background:#fbfdff;margin-bottom:10px">
-        <div style="font-weight:900">${escapeHTML(r.identifier_type)} · ${escapeHTML(r.identifier_value || "(no value)")}</div>
-        <div style="font-size:12px;color:#5b6477">${escapeHTML(r.store_name || "(no store)")} · ${escapeHTML(r.created_at)}</div>
-        <div style="margin-top:8px;font-size:13px">
-          <div><b>Payload:</b> ${escapeHTML((r.payload||"").slice(0,160) || "(none)")}</div>
-          <div><b>Notes:</b> ${escapeHTML((r.notes||"").slice(0,160) || "(none)")}</div>
-        </div>
-      </div>
-    `;
-  });
-}
-
-async function refreshFromDB(){
-  requireAuth();
-
-  // Load day if exists for selected date
-  const dayDate = $("date").value || todayISO();
-  const { data: days, error: dayErr } = await supabase
-    .from("axis_days")
-    .select("*")
-    .eq("user_id", state.user.id)
-    .eq("day_date", dayDate)
-    .limit(1);
-
-  if (dayErr) throw dayErr;
-
-  state.day = days && days.length ? days[0] : null;
-
-  // Load visits + intel for day if day exists
-  if (state.day){
-    const { data: visits, error: vErr } = await supabase
-      .from("axis_visits")
-      .select("*")
-      .eq("day_id", state.day.id)
-      .order("created_at", { ascending: true });
-
-    if (vErr) throw vErr;
-    state.visits = visits || [];
-
-    const { data: intel, error: iErr } = await supabase
-      .from("axis_intel")
-      .select("*")
-      .eq("day_id", state.day.id)
-      .order("created_at", { ascending: true });
-
-    if (iErr) throw iErr;
-    state.intel = intel || [];
-  } else {
-    state.visits = [];
-    state.intel = [];
-  }
-
-  $("beginState").textContent = state.day ? "Day active ✅" : "Not started";
-  $("beginState").className = state.day ? "statusGood" : "statusBad";
-
-  renderRunLog();
-  renderIntelLog();
-  setPills();
-}
-
-window.refreshFromDB = async ()=>{
-  try { await refreshFromDB(); }
-  catch(e){ alert(e.message || String(e)); }
-};
-
-window.loadToday = async ()=>{
-  $("date").value = todayISO();
-  await window.refreshFromDB();
-};
-
-window.saveHeaderOnly = async ()=>{
-  // just store locally in inputs; DB writes happen on Begin Day
-};
-
-window.beginDay = async ()=>{
-  try{
-    requireAuth();
-
-    const merch = ($("merchandiser").value || "").trim();
-    const dayDate = $("date").value || todayISO();
-    if (!merch) throw new Error("Merchandiser is required.");
-
-    // upsert day
-    const payload = {
-      user_id: state.user.id,
-      day_date: dayDate,
-      merchandiser: merch
-    };
-
-    const { data, error } = await supabase
-      .from("axis_days")
-      .upsert(payload, { onConflict: "user_id,day_date" })
-      .select("*")
-      .limit(1);
-
-    if (error) throw error;
-
-    state.day = data[0];
-    await refreshFromDB();
-  } catch(e){
-    alert(e.message || String(e));
-  }
-};
-
-window.startVisit = async ()=>{
-  try{
-    requireAuth();
-    requireDay();
-
-    const storeId = $("store").value;
-    if (!storeId) throw new Error("Select a store.");
-
-    const st = STORES.find(x => x.id === storeId);
-    const urgent = $("urgentFlag").value === "yes";
-
-    const row = {
-      user_id: state.user.id,
-      day_id: state.day.id,
-      store_id: storeId,
-      store_name: st?.name || storeId,
-      address: st?.address || null,
-      delivery: st?.delivery || null,
-      urgent,
-      sales_opp: ($("salesOpp").value || "").trim(),
-      inventory_concerns: ($("inventoryConcerns").value || "").trim(),
-      rep_questions: ($("repQuestions").value || "").trim(),
-      started_at: new Date().toISOString(),
-      ended_at: null
-    };
-
-    const { data, error } = await supabase
-      .from("axis_visits")
-      .insert(row)
-      .select("*")
-      .limit(1);
-
-    if (error) throw error;
-
-    state.activeVisit = data[0];
-    await refreshFromDB();
-  } catch(e){
-    alert(e.message || String(e));
-  }
-};
-
-window.endVisit = async ()=>{
-  try{
-    requireAuth();
-    requireDay();
-    if (!state.visits.length) throw new Error("No visits yet.");
-
-    // End the most recent in-progress visit
-    const last = [...state.visits].reverse().find(v => !v.ended_at);
-    if (!last) throw new Error("No in-progress visit to end.");
-
-    const patch = {
-      urgent: $("urgentFlag").value === "yes",
-      sales_opp: ($("salesOpp").value || "").trim(),
-      inventory_concerns: ($("inventoryConcerns").value || "").trim(),
-      rep_questions: ($("repQuestions").value || "").trim(),
-      ended_at: new Date().toISOString()
-    };
-
-    const { error } = await supabase
-      .from("axis_visits")
-      .update(patch)
-      .eq("id", last.id);
-
-    if (error) throw error;
-
-    state.activeVisit = null;
-    await refreshFromDB();
-  } catch(e){
-    alert(e.message || String(e));
-  }
-};
-
-window.clearVisitForm = ()=>{
-  $("urgentFlag").value = "no";
-  $("salesOpp").value = "";
-  $("inventoryConcerns").value = "";
-  $("repQuestions").value = "";
-};
-
-window.saveIntel = async ()=>{
-  try{
-    requireAuth();
-    requireDay();
-
-    const storeId = $("intelStore").value || null;
-    const st = storeId ? STORES.find(x => x.id === storeId) : null;
-
-    const row = {
-      user_id: state.user.id,
-      day_id: state.day.id,
-      store_id: storeId,
-      store_name: st?.name || null,
-      identifier_type: $("intelType").value,
-      identifier_value: ($("intelValue").value || "").trim(),
-      payload: ($("intelPayload").value || "").trim(),
-      notes: ($("intelNotes").value || "").trim()
-    };
-
-    const { error } = await supabase.from("axis_intel").insert(row);
-    if (error) throw error;
-
-    $("intelValue").value = "";
-    $("intelPayload").value = "";
-    $("intelNotes").value = "";
-    await refreshFromDB();
-  } catch(e){
-    alert(e.message || String(e));
-  }
-};
-
-window.clearIntel = ()=>{
-  $("intelStore").value = "";
-  $("intelType").value = "NFC";
-  $("intelValue").value = "";
-  $("intelPayload").value = "";
-  $("intelNotes").value = "";
-};
-
-window.downloadIntelExport = ()=>{
-  const blob = {
-    day: state.day,
-    intel: state.intel
+  const row = {
+    user_id: user.id,
+    day_date: dayDate,
+    merchandiser_name: merchName,
   };
-  const name = `AXIS_INTEL_${$("date").value || todayISO()}.json`;
-  const data = JSON.stringify(blob, null, 2);
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
-  a.download = name;
-  a.click();
-};
 
-window.downloadDBBackup = window.downloadDB = async ()=>{
-  try{
-    requireAuth();
-    // This is just a “client snapshot” of what we currently have loaded.
-    const blob = { user: state.user, day: state.day, visits: state.visits, intel: state.intel };
-    const name = `AXIS_DB_SNAPSHOT_${$("date").value || todayISO()}.json`;
-    const data = JSON.stringify(blob, null, 2);
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
-    a.download = name;
-    a.click();
-  } catch(e){
-    alert(e.message || String(e));
+  const { data, error } = await supabase
+    .from("axis_days")
+    .insert([row])
+    .select("id, day_date, merchandiser_name")
+    .single();
+
+  if (error) {
+    setStatus("Begin Day failed.", "error");
+    toast(`Begin Day failed: ${error.message}`, "error", 3500);
+    return;
   }
-};
 
-window.signIn = async ()=>{
-  try{
-    const email = ($("authEmail").value || "").trim();
-    const password = ($("authPass").value || "").trim();
-    if (!email || !password) throw new Error("Email and password required.");
+  state.day = data;
+  state.visit = null;
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+  setStatus(`Day started (${data.day_date}).`, "success");
+  toast("Begin Day ✓", "success");
+  render();
+}
 
-    state.user = data.user;
-    $("authCard").classList.add("hidden");
-    $("modeRun").classList.remove("hidden");
-    setMode("run");
-    setPills();
-    await refreshFromDB();
-  } catch(e){
-    alert(e.message || String(e));
+async function startVisit() {
+  const user = requireUser();
+
+  if (!state.day?.id) {
+    toast("Begin Day first.", "error");
+    return;
   }
-};
 
-window.signOut = async ()=>{
-  await supabase.auth.signOut();
-  state = { user:null, day:null, activeVisit:null, visits:[], intel:[] };
-  $("authCard").classList.remove("hidden");
-  $("modeRun").classList.add("hidden");
-  $("modeIntel").classList.add("hidden");
-  setPills();
-};
+  const storeName = $("#storeSelect")?.value || "";
+  if (!storeName) {
+    toast("Select a store.", "error");
+    return;
+  }
 
-async function init(){
-  renderStores();
-  $("date").value = todayISO();
-  $("host").textContent = window.location.host || "unknown";
+  setStatus("Starting visit…");
 
-  const { data } = await supabase.auth.getUser();
-  state.user = data.user || null;
-  setPills();
+  const row = {
+    user_id: user.id,
+    day_id: state.day.id,
+    store_name: storeName,
+    started_at: new Date().toISOString(),
+  };
 
-  if (state.user){
-    $("authCard").classList.add("hidden");
-    $("modeRun").classList.remove("hidden");
-    setMode("run");
-    await refreshFromDB();
-  } else {
-    $("authCard").classList.remove("hidden");
-    setMode("run");
+  const { data, error } = await supabase
+    .from("axis_visits")
+    .insert([row])
+    .select("id, store_name")
+    .single();
+
+  if (error) {
+    setStatus("Start Visit failed.", "error");
+    toast(`Start Visit failed: ${error.message}`, "error", 3500);
+    return;
+  }
+
+  state.visit = data;
+
+  setStatus(`Visit started (${data.store_name}).`, "success");
+  toast("Start Visit ✓", "success");
+  render();
+}
+
+// Placeholder buttons so the UI isn’t dead.
+function generateEVS() {
+  if (!state.visit?.id) return toast("Start a visit first.", "error");
+  toast("EVS generation: stub (next step).", "info", 2500);
+}
+function generatePDR() {
+  if (!state.visit?.id) return toast("Start a visit first.", "error");
+  toast("PDR generation: stub (next step).", "info", 2500);
+}
+
+// --------------------
+// Render
+// --------------------
+function render() {
+  // Auth status
+  const who = $("#who");
+  if (who) who.textContent = state.user ? state.user.email : "Not signed in";
+
+  // Buttons availability
+  const signedIn = !!state.user;
+  const hasDay = !!state.day?.id;
+  const hasVisit = !!state.visit?.id;
+
+  if ($("#btnSignOut")) $("#btnSignOut").disabled = !signedIn;
+  if ($("#btnSignIn")) $("#btnSignIn").disabled = signedIn;
+
+  if ($("#btnBeginDay")) $("#btnBeginDay").disabled = !signedIn;
+  if ($("#btnStartVisit")) $("#btnStartVisit").disabled = !signedIn || !hasDay;
+
+  if ($("#btnEVS")) $("#btnEVS").disabled = !signedIn || !hasVisit;
+  if ($("#btnPDR")) $("#btnPDR").disabled = !signedIn || !hasVisit;
+
+  // Day + visit text
+  const dayEl = $("#dayInfo");
+  if (dayEl) dayEl.textContent = hasDay ? `${state.day.day_date} • ${state.day.merchandiser_name}` : "No day active";
+
+  const visitEl = $("#visitInfo");
+  if (visitEl) visitEl.textContent = hasVisit ? state.visit.store_name : "No visit active";
+}
+
+// --------------------
+// Boot
+// --------------------
+function ensureStoreOptions() {
+  const sel = $("#storeSelect");
+  if (!sel) return;
+  if (sel.options.length > 0) return;
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select store…";
+  sel.appendChild(placeholder);
+
+  for (const s of stores) {
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    sel.appendChild(opt);
   }
 }
 
-init();
+function wireUI() {
+  ensureStoreOptions();
+
+  $("#btnSignIn")?.addEventListener("click", async () => {
+    const email = ($("#email")?.value || "").trim();
+    const password = ($("#password")?.value || "").trim();
+    if (!email || !password) return toast("Enter email + password.", "error");
+    await signIn(email, password);
+  });
+
+  $("#btnSignOut")?.addEventListener("click", signOut);
+  $("#btnBeginDay")?.addEventListener("click", beginDay);
+  $("#btnStartVisit")?.addEventListener("click", startVisit);
+
+  $("#btnEVS")?.addEventListener("click", generateEVS);
+  $("#btnPDR")?.addEventListener("click", generatePDR);
+}
+
+async function main() {
+  wireUI();
+
+  // If a session exists, load user on refresh
+  await refreshUser();
+
+  // Keep UI synced to auth changes
+  supabase.auth.onAuthStateChange(async () => {
+    await refreshUser();
+    render();
+  });
+
+  // Default date input (nice UX)
+  const dayDate = $("#dayDate");
+  if (dayDate && !dayDate.value) dayDate.value = new Date().toISOString().slice(0, 10);
+
+  render();
+  setStatus("Ready.", "info");
+}
+
+main().catch((e) => {
+  console.error(e);
+  setStatus("App boot error.", "error");
+  toast(`Boot error: ${e.message}`, "error", 4000);
+});
