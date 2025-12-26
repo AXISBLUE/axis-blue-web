@@ -1,29 +1,20 @@
-// axis-blue-web/supabaseClient.js
-// Builds the Supabase client using config returned by /env (Cloudflare Pages Function)
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+let _client = null;
 
-async function loadEnv() {
-  const res = await fetch("/env", { cache: "no-store" });
+export async function getSupabase() {
+  if (_client) return _client;
+
+  const res = await fetch("/api/env", { cache: "no-store" });
   if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Failed to load /env (${res.status}). ${txt}`);
+    throw new Error("Failed to load runtime config from /api/env");
   }
-  return res.json();
+  const cfg = await res.json();
+
+  if (!cfg?.SUPABASE_URL || !cfg?.SUPABASE_ANON_KEY) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_ANON_KEY in runtime config");
+  }
+
+  _client = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  return _client;
 }
-
-export const supabase = await (async () => {
-  const { supabaseUrl, supabaseAnonKey } = await loadEnv();
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing supabaseUrl/supabaseAnonKey from /env.");
-  }
-
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  });
-})();

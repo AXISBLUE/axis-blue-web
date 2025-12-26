@@ -2,235 +2,130 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AXIS BLUE — DEPLOY TEST OK</title>
-
-  <style>
-    :root{
-      --bg:#071827;
-      --card:#0b2336;
-      --card2:#0c2a40;
-      --text:#e9f2ff;
-      --muted:#9bb1c9;
-      --accent:#3aa0ff;
-      --bad:#ff5a5a;
-      --good:#35d07f;
-      --border:rgba(255,255,255,.10);
-      --shadow:0 12px 40px rgba(0,0,0,.45);
-      --radius:18px;
-    }
-    body{
-      margin:0;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
-      background: radial-gradient(1200px 800px at 20% 0%, #0b2f4d 0%, var(--bg) 55%, #04111c 100%);
-      color:var(--text);
-    }
-    .wrap{ max-width:860px; margin:0 auto; padding:22px 16px 60px; }
-    .hero{
-      display:flex; justify-content:space-between; align-items:flex-start; gap:18px;
-      margin:10px 0 18px;
-    }
-    .title h1{ margin:0; font-size:44px; letter-spacing:.2px; }
-    .title p{ margin:6px 0 0; color:var(--muted); font-size:18px; line-height:1.2; }
-    .pillbox{ display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
-    .pill{
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.04);
-      border-radius:999px;
-      padding:10px 14px;
-      color:var(--muted);
-      font-size:14px;
-      width:max-content;
-    }
-    .card{
-      background:linear-gradient(180deg,var(--card) 0%, var(--card2) 100%);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:16px;
-      margin:14px 0;
-    }
-    .card h2{ margin:0 0 10px; font-size:22px; }
-    .hint{ margin:0 0 14px; color:var(--muted); line-height:1.35; }
-    label{ display:block; font-size:13px; color:var(--muted); margin:12px 0 6px; }
-    input, select, textarea{
-      width:100%;
-      box-sizing:border-box;
-      padding:14px 14px;
-      border-radius:14px;
-      border:1px solid var(--border);
-      background:rgba(0,0,0,.18);
-      color:var(--text);
-      outline:none;
-      font-size:16px;
-    }
-    textarea{ min-height:90px; resize:vertical; }
-    .row{ display:flex; gap:10px; flex-wrap:wrap; }
-    .row > *{ flex:1; min-width:200px; }
-    .btnrow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    button{
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      padding:12px 14px;
-      border-radius:14px;
-      font-size:16px;
-      cursor:pointer;
-    }
-    button.primary{
-      background:var(--accent);
-      border-color:transparent;
-      color:#062033;
-      font-weight:700;
-    }
-    button:disabled{ opacity:.45; cursor:not-allowed; }
-    .status{
-      margin-top:10px;
-      font-size:14px;
-      color:var(--muted);
-    }
-    .status .good{ color:var(--good); font-weight:700; }
-    .status .bad{ color:var(--bad); font-weight:700; }
-    .toast{
-      position:fixed;
-      left:50%;
-      transform:translateX(-50%);
-      bottom:18px;
-      background:rgba(0,0,0,.72);
-      border:1px solid var(--border);
-      color:var(--text);
-      padding:12px 14px;
-      border-radius:14px;
-      box-shadow:var(--shadow);
-      max-width:92vw;
-      width:520px;
-      display:none;
-      z-index:9999;
-    }
-    .footer{
-      margin-top:22px;
-      text-align:center;
-      color:var(--muted);
-      font-size:14px;
-      line-height:1.3;
-    }
-    .footer .legal{
-      opacity:.95;
-    }
-    .footer .meta{
-      margin-top:10px;
-      font-size:12px;
-      opacity:.75;
-    }
-  </style>
-
-  <!-- Supabase JS CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AXIS BLUE — Web Online</title>
+  <link rel="icon" href="assets/axis_logo.png" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
-
 <body>
-  <div class="wrap">
-    <div class="hero">
-      <div class="title">
-        <h1>AXIS BLUE — DEPLOY TEST OK</h1>
-        <p>Private test environment<br><strong>aptest.axisblue.io</strong></p>
-      </div>
-      <div class="pillbox">
-        <div class="pill" id="pillEnv">Environment: Test</div>
-        <div class="pill" id="pillData">Data: Supabase</div>
-        <div class="pill" id="pillBuild">Build: Static + Functions</div>
-      </div>
+  <header class="top">
+    <div class="brand">
+      <div class="title">AXIS BLUE — Web Online</div>
+      <div class="subtitle">Private test environment • aptest.axisblue.io</div>
     </div>
+    <div class="chips">
+      <span class="chip">Environment: Test</span>
+      <span class="chip">Data: Supabase</span>
+      <span class="chip">Build: Static + Functions</span>
+    </div>
+  </header>
 
-    <div class="card" id="cardAuth">
+  <!-- LOCK SCREEN (only thing visible until auth succeeds) -->
+  <main class="wrap">
+    <section id="authCard" class="card">
       <h2>Authentication</h2>
-      <p class="hint">Sign in to unlock day + visit workflow. If auth fails, you’ll see a clear error message below.</p>
+      <p class="muted">Sign in to unlock the workflow. If auth fails, you'll see the reason.</p>
 
-      <label>Email</label>
-      <input id="email" autocomplete="email" placeholder="you@domain.com" />
+      <div class="grid">
+        <label>
+          <div class="label">Email</div>
+          <input id="email" type="email" placeholder="you@domain.com" autocomplete="username" />
+        </label>
 
-      <label>Password</label>
-      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••••" />
-
-      <div class="btnrow">
-        <button class="primary" id="btnSignIn">Sign In</button>
-        <button id="btnSignOut" disabled>Sign Out</button>
+        <label>
+          <div class="label">Password</div>
+          <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+        </label>
       </div>
 
-      <div class="status" id="authStatus">Signed in as: <span id="who">Loading…</span></div>
-    </div>
-
-    <div class="card" id="cardDay">
-      <h2>Start Day</h2>
-      <p class="hint">Creates a Day record and becomes the parent container for visits. This is the base of your “history”.</p>
-
-      <label>Merchandiser name</label>
-      <input id="merchName" placeholder="Gabriel Kearns" />
-
-      <label>Date</label>
-      <input id="dayDate" type="date" />
-
-      <div class="btnrow">
-        <button class="primary" id="btnBeginDay" disabled>Begin Day</button>
-        <button id="btnLoadActiveDay" disabled>Load Active Day</button>
+      <div class="row">
+        <button id="btnSignIn" class="btn primary">Sign In</button>
+        <button id="btnSignOut" class="btn" disabled>Sign Out</button>
+        <span id="authState" class="muted small">Signed out</span>
       </div>
 
-      <div class="status" id="dayStatus">
-        Active Day: <span id="activeDayText">None</span>
+      <div id="authError" class="error" hidden></div>
+    </section>
+
+    <!-- APP (hidden until signed in) -->
+    <section id="app" class="card" hidden>
+      <h2>Run Day</h2>
+      <p class="muted">You’re signed in. This section stays locked until auth succeeds.</p>
+
+      <div class="divider"></div>
+
+      <h3>Intelligence Capture</h3>
+
+      <div class="grid2">
+        <div class="panel">
+          <h4>Barcode / QR Scan</h4>
+          <p class="muted small">Uses your camera when supported. Fallback to manual entry if not.</p>
+
+          <div class="row">
+            <button id="btnStartScan" class="btn primary">Start Camera Scan</button>
+            <button id="btnStopScan" class="btn" disabled>Stop</button>
+          </div>
+
+          <video id="video" playsinline muted></video>
+
+          <label>
+            <div class="label">Detected code</div>
+            <input id="codeValue" type="text" placeholder="(auto-populates)" />
+          </label>
+
+          <label>
+            <div class="label">Product name (manual)</div>
+            <input id="productName" type="text" placeholder="Optional manual label" />
+          </label>
+
+          <label>
+            <div class="label">Tag photo required</div>
+            <input id="tagPhoto" type="file" accept="image/*" capture="environment" />
+          </label>
+
+          <div class="row">
+            <button id="btnSaveCapture" class="btn primary">Save Capture</button>
+            <span id="captureStatus" class="muted small"></span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h4>NFC (when available)</h4>
+          <p class="muted small">Works only on devices/browsers that support Web NFC.</p>
+
+          <div class="row">
+            <button id="btnStartNfc" class="btn primary">Start NFC Scan</button>
+            <button id="btnStopNfc" class="btn" disabled>Stop</button>
+          </div>
+
+          <div class="muted small" id="nfcStatus">Idle</div>
+
+          <label>
+            <div class="label">NFC payload</div>
+            <textarea id="nfcPayload" rows="4" placeholder="(auto-populates)"></textarea>
+          </label>
+        </div>
       </div>
-    </div>
 
-    <div class="card" id="cardVisit">
-      <h2>Store Visit</h2>
-      <p class="hint">Starts a Visit under the active Day. Notes save to Supabase immediately.</p>
+      <div class="divider"></div>
 
-      <label>Store</label>
-      <select id="storeSelect" disabled>
-        <option value="">Select store…</option>
-        <option>Walmart 1492</option>
-        <option>King Soopers 00014</option>
-        <option>Family Dollar 3477</option>
-        <option>Target SC 1471</option>
-      </select>
+      <h3>Management Output</h3>
+      <p class="muted small">Teams “send” needs an API/webhook. For now: copy + email draft works everywhere.</p>
 
-      <div class="btnrow">
-        <button class="primary" id="btnStartVisit" disabled>Start Visit</button>
+      <label>
+        <div class="label">Summary text</div>
+        <textarea id="summary" rows="6" placeholder="Write a quick summary here..."></textarea>
+      </label>
+
+      <div class="row">
+        <button id="btnCopySummary" class="btn">Copy Summary</button>
+        <button id="btnEmailSummary" class="btn">Email Draft</button>
+        <span id="mgmtStatus" class="muted small"></span>
       </div>
+    </section>
+  </main>
 
-      <label>Visit notes</label>
-      <textarea id="visitNotes" disabled placeholder="OOS items, sales opportunities, coolers, credits, anything…"></textarea>
-
-      <div class="btnrow">
-        <button id="btnSaveNotes" disabled>Save Notes</button>
-      </div>
-
-      <div class="status" id="visitStatus">Active Visit: <span id="activeVisitText">None</span></div>
-    </div>
-
-    <div class="card" id="cardDocs">
-      <h2>Documents</h2>
-      <p class="hint">PDF generation is next. For tomorrow, we’ll at least store Day + Visit + Notes reliably.</p>
-      <div class="btnrow">
-        <button id="btnGenerateEVS" disabled>Generate EVS</button>
-        <button id="btnGeneratePDR" disabled>Generate PDR</button>
-      </div>
-      <div class="status" id="docsStatus">Status: Waiting for workflow wiring.</div>
-    </div>
-
-    <div class="footer">
-      <div class="legal">
-        <strong>AXIS BLUE</strong> is a private operational system. Unauthorized access, sharing, or distribution is prohibited.
-      </div>
-      <div class="meta">
-        Test environment: <strong>aptest.axisblue.io</strong> • Soft launch phase • Internal use only
-      </div>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
-
-  <script src="/app.js"></script>
+  <script type="module" src="supabaseClient.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
-
-<!-- redeploy check Thu Dec 25 20:27:39 MST 2025 -->

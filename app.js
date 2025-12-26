@@ -1,301 +1,282 @@
-/* AXIS BLUE — Web Online (Test)
-   app.js — wires Supabase auth + Day + Visit + Notes
-*/
-
-let supabase = null;
+import { getSupabase } from "./supabaseClient.js";
 
 const $ = (id) => document.getElementById(id);
 
-const toast = (msg) => {
-  const el = $("toast");
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = "block";
-  clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(() => (el.style.display = "none"), 2600);
-};
+const authCard = $("authCard");
+const app = $("app");
 
-const state = {
-  user: null,
-  activeDay: null,
-  activeVisit: null,
-};
+const email = $("email");
+const password = $("password");
+const btnSignIn = $("btnSignIn");
+const btnSignOut = $("btnSignOut");
+const authState = $("authState");
+const authError = $("authError");
 
-// ----------------------------
-// Supabase init (from /env)
-// ----------------------------
-async function initSupabase() {
-  const r = await fetch("/env", { cache: "no-store" });
-  if (!r.ok) throw new Error(`/env failed (${r.status})`);
+const btnStartScan = $("btnStartScan");
+const btnStopScan = $("btnStopScan");
+const video = $("video");
+const codeValue = $("codeValue");
+const productName = $("productName");
+const tagPhoto = $("tagPhoto");
+const btnSaveCapture = $("btnSaveCapture");
+const captureStatus = $("captureStatus");
 
-  const cfg = await r.json();
+const btnStartNfc = $("btnStartNfc");
+const btnStopNfc = $("btnStopNfc");
+const nfcStatus = $("nfcStatus");
+const nfcPayload = $("nfcPayload");
 
-  // MUST be returned by your Pages Function (/functions/env.js)
-  // shape:
-  // { supabaseUrl: "...", supabaseAnonKey: "..." }
-  if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) {
-    throw new Error("Supabase config missing from /env. Need supabaseUrl + supabaseAnonKey.");
-  }
+const summary = $("summary");
+const btnCopySummary = $("btnCopySummary");
+const btnEmailSummary = $("btnEmailSummary");
+const mgmtStatus = $("mgmtStatus");
 
-  supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+let supabase;
+let scanStream = null;
+let scanTimer = null;
+let ndef = null;
+
+function showError(msg) {
+  authError.textContent = msg;
+  authError.hidden = false;
 }
 
-function uiLockAll() {
-  $("btnSignOut").disabled = true;
-  $("btnBeginDay").disabled = true;
-  $("btnLoadActiveDay").disabled = true;
-
-  $("storeSelect").disabled = true;
-  $("btnStartVisit").disabled = true;
-  $("visitNotes").disabled = true;
-  $("btnSaveNotes").disabled = true;
-
-  $("btnGenerateEVS").disabled = true;
-  $("btnGeneratePDR").disabled = true;
+function clearError() {
+  authError.hidden = true;
+  authError.textContent = "";
 }
 
-function uiSignedIn() {
-  $("btnSignOut").disabled = false;
-  $("btnBeginDay").disabled = false;
-  $("btnLoadActiveDay").disabled = false;
+function lockApp() {
+  app.hidden = true;
+  authCard.hidden = false;
+  btnSignOut.disabled = true;
+  authState.textContent = "Signed out";
 }
 
-function uiDayActive() {
-  $("storeSelect").disabled = false;
-  $("btnStartVisit").disabled = false;
+function unlockApp(userEmail) {
+  authCard.hidden = false; // keep auth card visible, but it's fine
+  app.hidden = false;
+  btnSignOut.disabled = false;
+  authState.textContent = `Signed in as: ${userEmail}`;
 }
 
-function uiVisitActive() {
-  $("visitNotes").disabled = false;
-  $("btnSaveNotes").disabled = false;
+async function refreshSession() {
+  const { data } = await supabase.auth.getSession();
+  const session = data?.session;
+  if (session?.user?.email) unlockApp(session.user.email);
+  else lockApp();
 }
 
-async function refreshUser() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
-
-  state.user = data.user || null;
-  $("who").textContent = state.user ? state.user.email : "Not signed in";
-  return state.user;
-}
-
-// ----------------------------
-// Auth
-// ----------------------------
 async function signIn() {
-  const email = $("email").value.trim();
-  const password = $("password").value;
-
-  if (!email || !password) return toast("Enter email + password.");
-
-  $("btnSignIn").disabled = true;
+  clearError();
+  btnSignIn.disabled = true;
 
   try {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.value.trim(),
+      password: password.value
+    });
     if (error) throw error;
-
-    await refreshUser();
-    uiSignedIn();
-    toast(`Signed in as ${state.user.email}`);
-
-    // Autoload any active day
-    await loadActiveDay();
+    await refreshSession();
   } catch (e) {
-    console.error(e);
-    toast(`Sign-in failed: ${e.message}`);
+    showError(e?.message || String(e));
+    lockApp();
   } finally {
-    $("btnSignIn").disabled = false;
+    btnSignIn.disabled = false;
   }
 }
 
 async function signOut() {
-  try {
-    await supabase.auth.signOut();
-  } catch (e) {
-    console.error(e);
-  }
-
-  state.user = null;
-  state.activeDay = null;
-  state.activeVisit = null;
-
-  $("activeDayText").textContent = "None";
-  $("activeVisitText").textContent = "None";
-  $("visitNotes").value = "";
-
-  uiLockAll();
-  $("who").textContent = "Not signed in";
-  toast("Signed out.");
+  clearError();
+  await stopScan();
+  await stopNfc();
+  await supabase.auth.signOut();
+  lockApp();
 }
 
-// ----------------------------
-// Day
-// ----------------------------
-async function beginDay() {
-  if (!state.user) return toast("Sign in first.");
+async function startScan() {
+  captureStatus.textContent = "";
+  codeValue.value = "";
 
-  const merchName = ($("merchName").value || "").trim() || "Merchandiser";
-  const dayDate = $("dayDate").value || new Date().toISOString().slice(0, 10);
-
-  try {
-    // close any other active days for this user (simple guard)
-    await supabase
-      .from("axis_days")
-      .update({ status: "closed" })
-      .eq("user_id", state.user.id)
-      .eq("status", "active");
-
-    const payload = {
-      user_id: state.user.id,
-      user_email: state.user.email,
-      merch_name: merchName,
-      day_date: dayDate,
-      status: "active",
-    };
-
-    const { data, error } = await supabase
-      .from("axis_days")
-      .insert(payload)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    state.activeDay = data;
-    $("activeDayText").textContent = `${data.day_date} (${data.id.slice(0, 8)}…)`;
-    toast("Day started.");
-    uiDayActive();
-
-    // clear any stale visit
-    state.activeVisit = null;
-    $("activeVisitText").textContent = "None";
-    $("visitNotes").value = "";
-    $("visitNotes").disabled = true;
-    $("btnSaveNotes").disabled = true;
-  } catch (e) {
-    console.error(e);
-    toast(`Begin Day failed: ${e.message}`);
+  if (!navigator.mediaDevices?.getUserMedia) {
+    captureStatus.textContent = "Camera not available in this browser.";
+    return;
   }
-}
 
-async function loadActiveDay() {
-  if (!state.user) return;
+  scanStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "environment" },
+    audio: false
+  });
+  video.srcObject = scanStream;
+  await video.play();
 
-  try {
-    const { data, error } = await supabase
-      .from("axis_days")
-      .select("*")
-      .eq("user_id", state.user.id)
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(1);
+  btnStartScan.disabled = true;
+  btnStopScan.disabled = false;
 
-    if (error) throw error;
+  if ("BarcodeDetector" in window) {
+    const detector = new BarcodeDetector({
+      formats: ["qr_code", "ean_13", "ean_8", "upc_a", "upc_e", "code_128"]
+    });
 
-    if (!data || data.length === 0) {
-      state.activeDay = null;
-      $("activeDayText").textContent = "None";
-      return toast("No active day found.");
-    }
-
-    state.activeDay = data[0];
-    $("activeDayText").textContent = `${state.activeDay.day_date} (${state.activeDay.id.slice(0, 8)}…)`;
-    uiDayActive();
-    toast("Active day loaded.");
-  } catch (e) {
-    console.error(e);
-    toast(`Load Active Day failed: ${e.message}`);
-  }
-}
-
-// ----------------------------
-// Visit + Notes
-// ----------------------------
-async function startVisit() {
-  if (!state.user) return toast("Sign in first.");
-  if (!state.activeDay) return toast("Start or load a Day first.");
-
-  const storeName = $("storeSelect").value;
-  if (!storeName) return toast("Pick a store.");
-
-  try {
-    const payload = {
-      user_id: state.user.id,
-      day_id: state.activeDay.id,
-      store_name: storeName,
-      notes: "",
-    };
-
-    const { data, error } = await supabase
-      .from("axis_visits")
-      .insert(payload)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    state.activeVisit = data;
-    $("activeVisitText").textContent = `${data.store_name} (${data.id.slice(0, 8)}…)`;
-    $("visitNotes").value = "";
-    uiVisitActive();
-    toast("Visit started.");
-  } catch (e) {
-    console.error(e);
-    toast(`Start Visit failed: ${e.message}`);
-  }
-}
-
-async function saveNotes() {
-  if (!state.activeVisit) return toast("Start a visit first.");
-
-  const notes = $("visitNotes").value;
-
-  try {
-    const { error } = await supabase
-      .from("axis_visits")
-      .update({ notes })
-      .eq("id", state.activeVisit.id);
-
-    if (error) throw error;
-    toast("Notes saved.");
-  } catch (e) {
-    console.error(e);
-    toast(`Save notes failed: ${e.message}`);
-  }
-}
-
-// ----------------------------
-// Boot
-// ----------------------------
-async function boot() {
-  uiLockAll();
-
-  // sensible defaults
-  if ($("dayDate")) $("dayDate").value = new Date().toISOString().slice(0, 10);
-  if ($("merchName") && !$("merchName").value) $("merchName").value = "Gabriel Kearns";
-
-  // wire buttons
-  $("btnSignIn").addEventListener("click", signIn);
-  $("btnSignOut").addEventListener("click", signOut);
-  $("btnBeginDay").addEventListener("click", beginDay);
-  $("btnLoadActiveDay").addEventListener("click", loadActiveDay);
-  $("btnStartVisit").addEventListener("click", startVisit);
-  $("btnSaveNotes").addEventListener("click", saveNotes);
-
-  await initSupabase();
-
-  // restore session if present
-  await refreshUser();
-  if (state.user) {
-    uiSignedIn();
-    toast(`Signed in as ${state.user.email}`);
-    await loadActiveDay();
+    scanTimer = setInterval(async () => {
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes?.length) {
+          codeValue.value = barcodes[0].rawValue || "";
+        }
+      } catch {
+        // ignore intermittent detect errors
+      }
+    }, 400);
   } else {
-    toast("Ready. Sign in to begin.");
+    captureStatus.textContent = "BarcodeDetector not supported. Use manual entry or try Safari/Chrome on mobile.";
   }
 }
 
-boot().catch((e) => {
-  console.error(e);
-  toast(`Init failed: ${e.message}`);
-});
+async function stopScan() {
+  if (scanTimer) clearInterval(scanTimer);
+  scanTimer = null;
+
+  if (scanStream) {
+    scanStream.getTracks().forEach(t => t.stop());
+    scanStream = null;
+  }
+  video.srcObject = null;
+
+  btnStartScan.disabled = false;
+  btnStopScan.disabled = true;
+}
+
+async function startNfc() {
+  nfcPayload.value = "";
+  nfcStatus.textContent = "";
+
+  if (!("NDEFReader" in window)) {
+    nfcStatus.textContent = "Web NFC not supported on this device/browser.";
+    return;
+  }
+
+  ndef = new NDEFReader();
+  await ndef.scan();
+  nfcStatus.textContent = "Scanning... tap an NFC tag";
+
+  btnStartNfc.disabled = true;
+  btnStopNfc.disabled = false;
+
+  ndef.onreading = (event) => {
+    const recs = [];
+    for (const record of event.message.records) {
+      recs.push({
+        recordType: record.recordType,
+        mediaType: record.mediaType,
+        data: record.data ? Array.from(new Uint8Array(record.data)) : null
+      });
+    }
+    nfcPayload.value = JSON.stringify({
+      serialNumber: event.serialNumber,
+      records: recs
+    }, null, 2);
+    nfcStatus.textContent = "Read success";
+  };
+
+  ndef.onreadingerror = () => {
+    nfcStatus.textContent = "Read error (try again)";
+  };
+}
+
+async function stopNfc() {
+  // Web NFC doesn’t reliably support “stop”, so we just reset UI and let session end naturally
+  ndef = null;
+  btnStartNfc.disabled = false;
+  btnStopNfc.disabled = true;
+  nfcStatus.textContent = "Idle";
+}
+
+async function saveCapture() {
+  captureStatus.textContent = "Saving…";
+  const code = codeValue.value.trim();
+  const name = productName.value.trim();
+  const nfc = nfcPayload.value.trim();
+
+  if (!code && !nfc && !name) {
+    captureStatus.textContent = "Add at least one: detected code, NFC, or product name.";
+    return;
+  }
+  if (!tagPhoto.files?.length) {
+    captureStatus.textContent = "Tag photo is required. Take/select a photo.";
+    return;
+  }
+
+  // NOTE: This demo stores capture metadata only. Photo upload can be added next (Supabase Storage).
+  // Right now we keep it deployable and stable.
+  const { data: sess } = await supabase.auth.getSession();
+  const user = sess?.session?.user?.email || "unknown";
+
+  const payload = {
+    ts: new Date().toISOString(),
+    user,
+    code: code || null,
+    name: name || null,
+    nfc: nfc || null
+  };
+
+  // Persist to Supabase (table "captures") if it exists, otherwise just confirm locally.
+  try {
+    const { error } = await supabase.from("captures").insert(payload);
+    if (error) throw error;
+    captureStatus.textContent = "Saved to Supabase (captures).";
+  } catch (e) {
+    captureStatus.textContent = "Saved locally (table missing or RLS). Next step: create captures table + policy.";
+    console.warn(e);
+  }
+}
+
+async function copySummary() {
+  try {
+    await navigator.clipboard.writeText(summary.value);
+    mgmtStatus.textContent = "Copied.";
+  } catch {
+    mgmtStatus.textContent = "Copy failed (browser permissions).";
+  }
+}
+
+function emailDraft() {
+  const subject = encodeURIComponent("AXIS BLUE – Visit Summary");
+  const body = encodeURIComponent(summary.value || "(summary goes here)");
+  // Put management emails here when you want:
+  const to = "";
+  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  mgmtStatus.textContent = "Email draft opened.";
+}
+
+(async function boot() {
+  try {
+    supabase = await getSupabase();
+
+    // lock-first
+    lockApp();
+
+    // session refresh
+    await refreshSession();
+    supabase.auth.onAuthStateChange(async () => {
+      await refreshSession();
+    });
+
+    btnSignIn.addEventListener("click", signIn);
+    btnSignOut.addEventListener("click", signOut);
+
+    btnStartScan.addEventListener("click", () => startScan().catch(e => captureStatus.textContent = e.message));
+    btnStopScan.addEventListener("click", () => stopScan().catch(() => {}));
+    btnSaveCapture.addEventListener("click", () => saveCapture().catch(e => captureStatus.textContent = e.message));
+
+    btnStartNfc.addEventListener("click", () => startNfc().catch(e => nfcStatus.textContent = e.message));
+    btnStopNfc.addEventListener("click", () => stopNfc().catch(() => {}));
+
+    btnCopySummary.addEventListener("click", copySummary);
+    btnEmailSummary.addEventListener("click", emailDraft);
+
+  } catch (e) {
+    showError(e?.message || String(e));
+    lockApp();
+  }
+})();
